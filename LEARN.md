@@ -89,7 +89,7 @@ If a downstream is down, a retry every second from 1,000 events would hit it all
 - "I built a webhook gateway in Rust. It verifies HMAC signatures with a timestamp window, stores each event in SQL before it answers 202, and delivers from a worker pool with retries, jitter, a dead-letter table, and a circuit breaker."
 - "The queue is a table. A worker claims a row with one `UPDATE ... RETURNING`. A lease lets another worker take over after a crash. That gives at-least-once delivery, and I send the event id as an idempotency key so the downstream can dedupe."
 - "I chose Rust here because the service is I/O heavy, runs for months, and must not crash or leak. The type system makes error handling explicit. I used it for one service, not everywhere. My other projects use Python and TypeScript."
-- "I measured it. On my 2015 laptop it accepts about N requests per second with a p99 of M ms, with the load tool on the same machine. Those numbers are for that laptop only." (Use the real numbers from docs/PERF.md.)
+- "I measured it. On my 2015 laptop it accepts about 4,100 to 4,400 events per second with a p99 near 25 ms, with the load tool on the same machine. My first run was 4 times slower. The load test showed that my claim query scanned and sorted the whole backlog. I fixed it with partial indexes. Those numbers are for that laptop only." (Numbers are in docs/PERF.md.)
 - "For a customer I wrote a 15-minute onboarding guide and a runbook. A Forward Deployed Engineer needs those as much as the code."
 - Be ready to say what is not done (list below). Honest limits are a strength.
 
