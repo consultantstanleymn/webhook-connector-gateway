@@ -1,0 +1,50 @@
+[package]
+name = "webhook-connector-gateway"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+default-run = "gateway"
+license = "MIT"
+description = "Webhook and connector gateway: signed inbound webhooks, durable queue, retried delivery"
+authors = ["Stanley Sujith Nelavala"]
+publish = false
+
+[dependencies]
+anyhow = "1.0.104"
+axum = "0.8.9"
+clap = { version = "4.6.7", features = ["derive", "env"] }
+hex = "0.4.3"
+hmac = "0.13.0"
+prometheus = "0.14.0"
+rand = "0.10.3"
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+sha2 = "0.11.1"
+sqlx = { version = "0.9.0", default-features = false, features = ["runtime-tokio", "sqlite", "derive"] }
+thiserror = "2.0.21"
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "signal", "sync", "time", "net"] }
+toml = "1.2.1"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["json", "env-filter"] }
+uuid = { version = "1.29.1", features = ["v4"] }
+
+[dev-dependencies]
+proptest = "1.12.0"
+
+[[bin]]
+name = "gateway"
+path = "src/main.rs"
+
+[[bin]]
+name = "mock-downstream"
+path = "src/bin/mock_downstream.rs"
+
+[[bin]]
+name = "loadtest"
+path = "src/bin/loadtest.rs"
+
+[profile.release]
+lto = "thin"
+codegen-units = 4
+strip = true
