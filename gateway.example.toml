@@ -1,0 +1,39 @@
+# Example config. Copy to gateway.toml and edit.
+# Tenant credentials: leave api_key and secret out and the gateway makes
+# them on first start and prints them once. Do not commit real secrets.
+
+database_url = "sqlite://gateway.db"
+
+[server]
+bind = "127.0.0.1:8080"
+max_body_bytes = 262144          # 256 KiB
+admin_token = ""                 # set GATEWAY_ADMIN_TOKEN to turn on /admin
+signature_tolerance_secs = 300
+rotation_grace_secs = 86400
+
+[queue]
+workers = 4
+max_attempts = 6
+backoff_base_ms = 1000
+backoff_max_ms = 300000
+poll_ms = 500
+lease_ms = 60000
+shutdown_grace_secs = 20
+
+[delivery]
+timeout_ms = 10000
+breaker_failures = 5
+breaker_cooldown_ms = 30000
+
+[[tenants]]
+id = "acme"
+downstream_url = "http://127.0.0.1:9000/events"
+rate_limit = { capacity = 100.0, refill_per_sec = 50.0 }
+rules = [
+  { op = "keep",   field = "type", equals = "order.created" },
+  { op = "drop",   field = "test", equals = true },
+  { op = "rename", from = "customer.email", to = "email" },
+  { op = "remove", field = "internal_notes" },
+  { op = "enrich", field = "source", value = "acme-gateway" },
+  { op = "enrich", field = "gateway_event_id", value = "$event_id" },
+]

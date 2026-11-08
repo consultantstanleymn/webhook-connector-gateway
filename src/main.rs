@@ -168,8 +168,8 @@ async fn admin_command(cmd: Cmd, cfg: Config) -> anyhow::Result<()> {
             limit,
         } => {
             println!(
-                "{:<36}  {:<10} {:<10} {:>3}  {}",
-                "ID", "TENANT", "STATUS", "TRY", "LAST ERROR"
+                "{:<36}  {:<10} {:<10} {:>3}  LAST ERROR",
+                "ID", "TENANT", "STATUS", "TRY"
             );
             for e in store
                 .list_events(status.as_deref(), tenant.as_deref(), limit)
