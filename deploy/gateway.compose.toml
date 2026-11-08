@@ -1,0 +1,20 @@
+# Config used by docker-compose. Keys are demo values, not real secrets.
+database_url = "sqlite:///data/gateway.db"
+
+[server]
+bind = "0.0.0.0:8080"
+
+[queue]
+workers = 4
+backoff_base_ms = 500
+
+[[tenants]]
+id = "acme"
+api_key = "demo-api-key"
+secret = "demo-secret"
+downstream_url = "http://downstream:9000/events"
+rules = [
+  { op = "keep",   field = "type", equals = "order.created" },
+  { op = "rename", from = "customer.email", to = "email" },
+  { op = "enrich", field = "source", value = "acme-gateway" },
+]

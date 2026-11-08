@@ -1,0 +1,28 @@
+# Gateway + mock downstream + Prometheus.
+# Start:  GATEWAY_ADMIN_TOKEN=change-me docker compose up --build
+services:
+  gateway:
+    build: .
+    ports: ["8080:8080"]
+    environment:
+      GATEWAY_ADMIN_TOKEN: ${GATEWAY_ADMIN_TOKEN:-change-me}
+      RUST_LOG: info
+    volumes:
+      - ./deploy/gateway.compose.toml:/etc/gateway/gateway.toml:ro
+      - gateway-data:/data
+    depends_on: [downstream]
+  downstream:
+    build: .
+    entrypoint: ["mock-downstream"]
+    environment:
+      BIND: 0.0.0.0:9000
+      WEBHOOK_SECRET: demo-secret
+    ports: ["9000:9000"]
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    ports: ["9090:9090"]
+    volumes:
+      - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on: [gateway]
+volumes:
+  gateway-data:
