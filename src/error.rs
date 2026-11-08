@@ -71,6 +71,17 @@ impl IntoResponse for ApiError {
                 tracing::error!(error = %e, "internal error");
                 "internal error".to_string() // never leak details to callers
             }
+            ApiError::Unauthorized(code) => match *code {
+                "missing_api_key" => "send your API key in the X-Api-Key header",
+                "invalid_api_key" => "API key not recognised",
+                "missing_signature" => "send the signature in the X-Signature header",
+                "malformed_signature" => "X-Signature must look like t=<unix seconds>,v1=<hex>",
+                "stale_timestamp" => "signature timestamp is outside the allowed window",
+                "bad_signature" => "signature does not match the body and secret",
+                "invalid_admin_token" => "admin token not accepted",
+                other => other,
+            }
+            .to_string(),
             other => other.to_string(),
         };
         let mut res = (

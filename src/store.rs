@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS events (
     updated_at      INTEGER NOT NULL,
     UNIQUE (tenant_id, idempotency_key)
 );
-CREATE INDEX IF NOT EXISTS events_queue_idx ON events (status, next_attempt_at);
+CREATE INDEX IF NOT EXISTS events_pending_idx ON events (next_attempt_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS events_processing_idx ON events (locked_until) WHERE status = 'processing';
 CREATE INDEX IF NOT EXISTS events_tenant_idx ON events (tenant_id, created_at);
 CREATE TABLE IF NOT EXISTS dead_letters (
     event_id    TEXT PRIMARY KEY,
@@ -268,20 +269,35 @@ impl Store {
         })
     }
 
-    /// Take the next due event. Also takes events whose lease ran out, which
-    /// happens when a worker crashed.
+    /// Take the next due event. If none is due, take an event whose lease
+    /// ran out, which happens when a worker crashed. Two small queries, each
+    /// served by a partial index in order, so the cost does not grow with
+    /// the backlog.
     pub async fn claim(&self, now: i64, lease_ms: i64) -> Result<Option<Claimed>, sqlx::Error> {
-        sqlx::query_as(
+        let due: Option<Claimed> = sqlx::query_as(
             "UPDATE events SET status = 'processing', attempts = attempts + 1,
                     locked_until = ?, updated_at = ?
              WHERE id = (SELECT id FROM events
-                         WHERE (status = 'pending' AND next_attempt_at <= ?)
-                            OR (status = 'processing' AND locked_until <= ?)
+                         WHERE status = 'pending' AND next_attempt_at <= ?
                          ORDER BY next_attempt_at LIMIT 1)
              RETURNING id, tenant_id, payload, trace_id, attempts",
         )
         .bind(now + lease_ms)
         .bind(now)
+        .bind(now)
+        .fetch_optional(&self.pool)
+        .await?;
+        if due.is_some() {
+            return Ok(due);
+        }
+        sqlx::query_as(
+            "UPDATE events SET attempts = attempts + 1, locked_until = ?, updated_at = ?
+             WHERE id = (SELECT id FROM events
+                         WHERE status = 'processing' AND locked_until <= ?
+                         ORDER BY locked_until LIMIT 1)
+             RETURNING id, tenant_id, payload, trace_id, attempts",
+        )
+        .bind(now + lease_ms)
         .bind(now)
         .bind(now)
         .fetch_optional(&self.pool)
