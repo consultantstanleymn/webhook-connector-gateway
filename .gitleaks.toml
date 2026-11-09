@@ -1,0 +1,17 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known public test values"
+paths = [
+  # Build output and downloaded agent jar are not tracked.
+  '''target/.*''',
+  '''docs/engagement/evidence/.*''',
+]
+
+regexes = [
+  # Public demo tenant key in scripts/demo.sh. It is a made-up value for a local mock.
+  '''flaky-api-key''',
+  # Made-up API key for the local trace script. It is a mock value.
+  '''trace-key''',
+]

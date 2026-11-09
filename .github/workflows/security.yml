@@ -1,0 +1,88 @@
+name: security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: '41 5 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: "sast (CodeQL, Rust)"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: rust
+      - uses: github/codeql-action/analyze@v3
+
+  secrets:
+    name: "secrets (gitleaks)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install gitleaks
+        run: |
+          curl -sSL -o gitleaks.tgz https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz
+          tar -xzf gitleaks.tgz gitleaks
+      - run: ./gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
+
+  deps:
+    name: "deps (cargo audit)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read accepted advisories from security/exceptions.json
+        id: exc
+        run: |
+          python3 scripts/check_security_exceptions.py security/exceptions.json
+          echo "ids=$(jq -r '[.[] | select(.tool == "cargo-audit") | .id] | join(",")' security/exceptions.json)" >> "$GITHUB_OUTPUT"
+      - uses: rustsec/audit-check@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ignore: ${{ steps.exc.outputs.ids }}
+
+  image:
+    name: "image (trivy image)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t webhook-connector-gateway:sec .
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: webhook-connector-gateway:sec
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: '1'
+
+  sbom:
+    name: "sbom (CycloneDX)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          format: cyclonedx
+          output: sbom-source.cdx.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sbom-source
+          path: sbom-source.cdx.json
+
+  exceptions:
+    name: "exceptions file check"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/check_security_exceptions.py security/exceptions.json

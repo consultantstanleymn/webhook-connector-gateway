@@ -20,7 +20,7 @@ A finding in `security/exceptions.json` that has not expired does not fail the j
 ```
 gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
 gitleaks dir --config .gitleaks.toml --redact --no-banner .
-cargo audit
+cargo audit --ignore RUSTSEC-2026-0459   # the accepted exception, see below
 trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --skip-dirs target .
 trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 localhost/webhook-connector-gateway:sec
 trivy fs --format cyclonedx --output docs/engagement/evidence/sbom-source.cdx.json --skip-dirs target .
@@ -29,9 +29,12 @@ python3 scripts/check_security_exceptions.py security/exceptions.json
 scripts/test_check_security_exceptions.sh
 ```
 
-## First scan result
+## First scan results
 
-Gitleaks flagged the demo tenant key `flaky-api-key` in `scripts/demo.sh`. It is a made-up value for a local mock. It is now in the allowlist of `.gitleaks.toml` with a comment. No other finding.
+- Gitleaks flagged two made-up mock keys in local scripts (`flaky-api-key` in `scripts/demo.sh`, `trace-key` in `scripts/trace-run.sh`). Both are in the allowlist of `.gitleaks.toml` with a comment.
+- `cargo audit` found RUSTSEC-2026-0459 in `libsqlite3-sys` 0.37.0 (through sqlx 0.9.0, medium 6.8). No sqlx release allows the fixed version yet. It is an accepted exception in `security/exceptions.json` with an owner, a reason and an expiry date (2027-02-01). The workflow passes the listed IDs to the audit step.
+- The first image build failed because the Dockerfile did not copy `migrations/`. The fix is in the Dockerfile. The image then built and the Trivy scan found no HIGH or CRITICAL finding with a fix.
+
 
 ## Status
 
