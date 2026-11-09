@@ -5,6 +5,7 @@
 //! fail a random share of calls, or `DELAY_MS` to slow every answer.
 //! The mock applies each `Idempotency-Key` once: `unique` counts keys that got a
 //! 200, and `duplicates` counts repeat deliveries of a key that was applied.
+//! `POST /fail-rate/<0.0..1.0>` changes the failure share while the mock runs.
 //! `GET /stats` shows the counts. With `STATS_FILE=<path>`, the mock also writes
 //! the counts to that file after each request, so a restart keeps them for a lab.
 //! If `WEBHOOK_SECRET` is set, the gateway signature is checked and a bad one gets 401.
@@ -12,7 +13,7 @@
 use axum::{
     Json, Router,
     body::Bytes,
-    extract::State,
+    extract::{Path, State},
     http::{HeaderMap, StatusCode},
     routing::{get, post},
 };
@@ -62,7 +63,8 @@ struct Mock {
     ok: AtomicU64,
     stats: Mutex<Stats>,
     stats_file: Option<String>,
-    fail_rate: f64,
+    /// The failure share, as f64 bits, so a lab can change it while the mock runs.
+    fail_rate: AtomicU64,
     fail_first: u64,
     delay_ms: u64,
     secret: Option<String>,
@@ -95,7 +97,8 @@ async fn events(
             );
         }
     }
-    let random_fail = m.fail_rate > 0.0 && rand::random::<f64>() < m.fail_rate;
+    let rate = f64::from_bits(m.fail_rate.load(Ordering::SeqCst));
+    let random_fail = rate > 0.0 && rand::random::<f64>() < rate;
     if n <= m.fail_first || random_fail {
         persist(&m, key, false);
         return (
@@ -134,6 +137,15 @@ fn persist(m: &Mock, key: &str, applied: bool) {
     }
 }
 
+/// Change the failure share while the mock runs. `POST /fail-rate/0.0`.
+async fn set_fail_rate(State(m): State<Arc<Mock>>, Path(value): Path<f64>) -> StatusCode {
+    if !(0.0..=1.0).contains(&value) {
+        return StatusCode::BAD_REQUEST;
+    }
+    m.fail_rate.store(value.to_bits(), Ordering::SeqCst);
+    StatusCode::NO_CONTENT
+}
+
 async fn stats(State(m): State<Arc<Mock>>) -> Json<Value> {
     let st = m.stats.lock().unwrap_or_else(|e| e.into_inner());
     Json(st.json(m.ok.load(Ordering::SeqCst)))
@@ -154,10 +166,13 @@ async fn main() -> anyhow::Result<()> {
         ok: AtomicU64::new(0),
         stats: Mutex::new(Stats::default()),
         stats_file: std::env::var("STATS_FILE").ok().filter(|s| !s.is_empty()),
-        fail_rate: std::env::var("FAIL_RATE")
-            .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(0.0),
+        fail_rate: AtomicU64::new(
+            std::env::var("FAIL_RATE")
+                .ok()
+                .and_then(|v| v.parse::<f64>().ok())
+                .unwrap_or(0.0)
+                .to_bits(),
+        ),
         fail_first: env_u64("FAIL_FIRST").max(env_u64("FAIL_FIRST_N")),
         delay_ms: env_u64("DELAY_MS"),
         secret: std::env::var("WEBHOOK_SECRET")
@@ -167,6 +182,7 @@ async fn main() -> anyhow::Result<()> {
     let app = Router::new()
         .route("/events", post(events))
         .route("/stats", get(stats))
+        .route("/fail-rate/{value}", post(set_fail_rate))
         .with_state(mock);
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     println!("mock downstream listening on {}", listener.local_addr()?);
