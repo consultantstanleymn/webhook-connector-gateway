@@ -15,6 +15,7 @@ pub mod ingest;
 pub mod metrics;
 pub mod observability;
 pub mod ratelimit;
+pub mod retrybudget;
 pub mod signature;
 pub mod store;
 pub mod trace;

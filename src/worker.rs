@@ -7,12 +7,14 @@ use crate::{
     delivery::{Deliverer, DeliveryResult},
     metrics::Metrics,
     now_ms,
+    retrybudget::RetryBudget,
     store::{Claimed, Store},
     transform::{self, Outcome},
 };
 use rand::RngExt;
 use std::{
-    sync::Arc,
+    collections::HashMap,
+    sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
 use tokio::{
@@ -29,6 +31,8 @@ pub struct Engine {
     pub breakers: Arc<Breakers>,
     pub metrics: Metrics,
     pub notify: Arc<Notify>,
+    /// One retry budget for each tenant. The tenant set is fixed by the config.
+    pub budgets: Arc<Mutex<HashMap<String, RetryBudget>>>,
 }
 
 impl Engine {
@@ -50,7 +54,21 @@ impl Engine {
             breakers,
             metrics,
             notify,
+            budgets: Arc::new(Mutex::new(HashMap::new())),
         })
+    }
+
+    fn with_budget<T>(&self, tenant: &str, f: impl FnOnce(&mut RetryBudget) -> T) -> T {
+        let d = &self.cfg.delivery;
+        let mut map = self.budgets.lock().unwrap_or_else(|e| e.into_inner());
+        let b = map.entry(tenant.to_string()).or_insert_with(|| {
+            RetryBudget::new(
+                d.retry_budget_ratio,
+                d.retry_budget_min,
+                d.retry_budget_window_ms,
+            )
+        });
+        f(b)
     }
 
     fn policy(&self) -> BackoffPolicy {
@@ -127,6 +145,9 @@ impl Engine {
             return Ok(());
         }
 
+        if ev.attempts == 1 {
+            self.with_budget(&ev.tenant_id, |b| b.record_first(now_ms()));
+        }
         let started = Instant::now();
         let result = self
             .deliverer
@@ -162,9 +183,18 @@ impl Engine {
                     self.observe("dead", secs);
                     warn!(error = %err, "max attempts reached, event dead-lettered");
                 } else {
-                    let delay = self
-                        .policy()
-                        .delay_ms(ev.attempts as u32, rand::rng().random::<f64>());
+                    let allowed = self.with_budget(&ev.tenant_id, |b| b.allow_retry(now_ms()));
+                    let delay = if allowed {
+                        self.policy()
+                            .delay_ms(ev.attempts as u32, rand::rng().random::<f64>())
+                    } else {
+                        // The budget is used up: wait for the longest backoff.
+                        self.metrics
+                            .retry_budget_exhausted
+                            .with_label_values(&[&ev.tenant_id])
+                            .inc();
+                        self.cfg.queue.backoff_max_ms
+                    };
                     self.store
                         .schedule_retry(&ev.id, now_ms() + delay as i64, &err)
                         .await?;

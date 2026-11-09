@@ -55,3 +55,6 @@ The schema now lives in `migrations/<backend>/NNNN_name.sql` and `sqlx::migrate!
 
 ## 18. Store port as an enum, not a trait object
 The store is an enum with one variant for each backend (SQLite now, Postgres next). Rust async functions in traits are not object safe, so a `dyn Store` would need boxing or a helper crate. The backends are known and few. The compiler checks that every method handles every backend. A third backend means one new variant and one new match arm in each method.
+
+## 19. Retry budget per tenant
+When a downstream fails, every event retries, and the retries add load to a system that is already hurt. Each tenant has a budget: retries may not pass `max(min, ratio * first attempts)` in a sliding window (defaults: ratio 0.2, min 10, window 60 s). A retry that the budget refuses waits for the longest backoff, and `gateway_retry_budget_exhausted_total{tenant}` counts it. The event is not dropped. The tenant label is bounded because the tenant set comes from the config. The budget lives in one process, so with many instances the limit is approximate.

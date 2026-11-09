@@ -597,3 +597,36 @@ async fn ingest_recovers_after_drain() {
     tokio::time::sleep(std::time::Duration::from_millis(400)).await;
     assert_eq!(h.post(ORDER, Some("r-4")).await.status().as_u16(), 202);
 }
+
+#[tokio::test]
+async fn retry_budget_caps_retries() {
+    let h = Harness::start_with(|c| {
+        c.queue.max_attempts = 1000;
+        c.queue.backoff_max_ms = 60_000; // a refused retry waits far beyond this test
+        c.delivery.breaker_failures = 1_000_000; // keep the breaker out of this test
+        c.delivery.retry_budget_ratio = 0.1;
+        c.delivery.retry_budget_min = 2;
+    })
+    .await;
+    h.mock.force_status.store(503, Ordering::SeqCst);
+    for i in 0..20 {
+        h.post(ORDER, Some(&format!("rb-{i}"))).await;
+    }
+    tokio::time::sleep(std::time::Duration::from_millis(1500)).await;
+    let calls = h.mock.call_count.load(Ordering::SeqCst);
+    // 20 first attempts plus at most max(2, 0.1 * 20) = 2 retries.
+    assert!((20..=22).contains(&calls), "calls were {calls}");
+    let text = h
+        .client
+        .get(format!("{}/metrics", h.base))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(
+        text.contains("gateway_retry_budget_exhausted_total"),
+        "metric missing"
+    );
+}

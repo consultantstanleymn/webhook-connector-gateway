@@ -69,6 +69,11 @@ pub struct DeliveryCfg {
     pub timeout_ms: u64,
     pub breaker_failures: u32,
     pub breaker_cooldown_ms: u64,
+    /// Retries may be at most this share of first attempts in the window.
+    pub retry_budget_ratio: f64,
+    /// Retries that are always allowed in the window.
+    pub retry_budget_min: u32,
+    pub retry_budget_window_ms: i64,
 }
 
 impl Default for DeliveryCfg {
@@ -77,6 +82,9 @@ impl Default for DeliveryCfg {
             timeout_ms: 10_000,
             breaker_failures: 5,
             breaker_cooldown_ms: 30_000,
+            retry_budget_ratio: 0.2,
+            retry_budget_min: 10,
+            retry_budget_window_ms: 60_000,
         }
     }
 }

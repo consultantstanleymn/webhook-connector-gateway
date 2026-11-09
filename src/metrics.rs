@@ -15,6 +15,8 @@ pub struct Metrics {
     pub queue_depth: IntGaugeVec,
     /// Requests refused to protect the queue. The reason label is a fixed set.
     pub ingest_shed: CounterVec,
+    /// Retries postponed because the tenant budget was used up.
+    pub retry_budget_exhausted: CounterVec,
 }
 
 const BUCKETS: &[f64] = &[
@@ -77,6 +79,14 @@ impl Metrics {
         )
         .expect("valid metric");
         ingest_shed.with_label_values(&["queue_full"]).inc_by(0.0);
+        let retry_budget_exhausted = CounterVec::new(
+            Opts::new(
+                "gateway_retry_budget_exhausted_total",
+                "Retries postponed because the retry budget was used up",
+            ),
+            &["tenant"],
+        )
+        .expect("valid metric");
         for c in [
             Box::new(events_received.clone()) as Box<dyn prometheus::core::Collector>,
             Box::new(requests_rejected.clone()),
@@ -85,6 +95,7 @@ impl Metrics {
             Box::new(delivery_duration.clone()),
             Box::new(queue_depth.clone()),
             Box::new(ingest_shed.clone()),
+            Box::new(retry_budget_exhausted.clone()),
         ] {
             registry.register(c).expect("register once");
         }
@@ -97,6 +108,7 @@ impl Metrics {
             delivery_duration,
             queue_depth,
             ingest_shed,
+            retry_budget_exhausted,
         }
     }
 
