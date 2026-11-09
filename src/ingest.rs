@@ -19,6 +19,7 @@ use axum::{
 };
 use serde_json::{Value, json};
 use std::time::Instant;
+use tracing::Instrument;
 
 pub const API_KEY_HEADER: &str = "x-api-key";
 pub const SIGNATURE_HEADER: &str = "x-signature";
@@ -121,6 +122,8 @@ async fn ingest_inner(
     check_backpressure(st).await?;
 
     let id = uuid::Uuid::new_v4().to_string();
+    let span = tracing::info_span!("ingest", tenant.id = %tenant.id, event.id = %id);
+    crate::observability::set_trace_parent(&span, &trace_id);
     let outcome = st
         .store
         .enqueue(&NewEvent {
@@ -130,6 +133,7 @@ async fn ingest_inner(
             payload: text,
             trace_id: &trace_id,
         })
+        .instrument(span)
         .await?;
     match outcome {
         Enqueued::New => {

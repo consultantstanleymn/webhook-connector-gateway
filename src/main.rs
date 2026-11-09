@@ -99,7 +99,7 @@ async fn main() -> anyhow::Result<()> {
 }
 
 async fn serve(cfg: Config) -> anyhow::Result<()> {
-    observability::init_logging();
+    let tracer_provider = observability::init_logging();
     let grace = Duration::from_secs(cfg.queue.shutdown_grace_secs);
     let bind = cfg.server.bind.clone();
     let rt = Runtime::build(cfg).await?;
@@ -140,6 +140,10 @@ async fn serve(cfg: Config) -> anyhow::Result<()> {
         );
     }
     tracing::info!("gateway stopped");
+    if let Some(p) = tracer_provider {
+        // Send the last spans before the process ends.
+        let _ = p.shutdown();
+    }
     Ok(())
 }
 

@@ -58,3 +58,6 @@ The store is an enum with one variant for each backend (SQLite now, Postgres nex
 
 ## 19. Retry budget per tenant
 When a downstream fails, every event retries, and the retries add load to a system that is already hurt. Each tenant has a budget: retries may not pass `max(min, ratio * first attempts)` in a sliding window (defaults: ratio 0.2, min 10, window 60 s). A retry that the budget refuses waits for the longest backoff, and `gateway_retry_budget_exhausted_total{tenant}` counts it. The event is not dropped. The tenant label is bounded because the tenant set comes from the config. The budget lives in one process, so with many instances the limit is approximate.
+
+## 20. Span export is off unless an endpoint is set
+When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the gateway exports spans over OTLP gRPC. Without it, no exporter starts and the logs work as before. Spans `ingest`, `claim` and `deliver` join one trace per event. Only the trace id travels with a stored event, so each span uses that trace id with a made-up remote parent span id. The outbound `traceparent` header still carries the event trace id with a new span id. Crates (all one 0.33 line, tracing-opentelemetry 0.34): opentelemetry 0.33.1, opentelemetry_sdk 0.33.1, opentelemetry-otlp 0.33.1, tracing-opentelemetry 0.34.0.

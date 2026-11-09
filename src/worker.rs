@@ -80,9 +80,17 @@ impl Engine {
 
     /// Handle one due event. Returns false when the queue had nothing due.
     pub async fn process_one(&self) -> anyhow::Result<bool> {
+        let claim_started = Instant::now();
         let Some(ev) = self.store.claim(now_ms(), self.cfg.queue.lease_ms).await? else {
             return Ok(false);
         };
+        {
+            // A short span that marks the claim. It joins the trace of the event.
+            let claim = tracing::info_span!("claim", tenant.id = %ev.tenant_id, event.id = %ev.id,
+                attempt = ev.attempts, claim.duration_ms = claim_started.elapsed().as_millis() as u64);
+            crate::observability::set_trace_parent(&claim, &ev.trace_id);
+            claim.in_scope(|| tracing::debug!("event claimed"));
+        }
         let span = tracing::info_span!("event", event_id = %ev.id, tenant = %ev.tenant_id,
                                         trace_id = %ev.trace_id, attempt = ev.attempts);
         self.handle(ev).instrument(span).await?;
@@ -149,6 +157,9 @@ impl Engine {
             self.with_budget(&ev.tenant_id, |b| b.record_first(now_ms()));
         }
         let started = Instant::now();
+        let deliver_span = tracing::info_span!("deliver", tenant.id = %ev.tenant_id,
+            event.id = %ev.id, attempt = ev.attempts, outcome = tracing::field::Empty);
+        crate::observability::set_trace_parent(&deliver_span, &ev.trace_id);
         let result = self
             .deliverer
             .deliver(
@@ -158,7 +169,16 @@ impl Engine {
                 &ev.trace_id,
                 serde_json::to_vec(&out)?,
             )
+            .instrument(deliver_span.clone())
             .await;
+        deliver_span.record(
+            "outcome",
+            match &result {
+                DeliveryResult::Success => "success",
+                DeliveryResult::Permanent(_) => "permanent_failure",
+                DeliveryResult::Retryable(_) => "retryable_failure",
+            },
+        );
         let secs = started.elapsed().as_secs_f64();
 
         match result {
