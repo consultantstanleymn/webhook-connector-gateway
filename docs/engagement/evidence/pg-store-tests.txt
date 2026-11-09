@@ -1,0 +1,15 @@
+# Evidence: Postgres store tests against postgres:16-alpine
+label: VERIFIED LOCALLY
+date: 2026-11-09 08:37 UTC
+code commit: e2e914e45cdcc2a7eb2102955a1fcbf45175c51e
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: GATEWAY_TEST_PG_URL=postgres://gw:gw@127.0.0.1:25632/gw_test cargo test -j 2 --locked --test pg_store
+notes: Container rgw-pg-test (postgres 16, local, port 25632). Each test uses a fresh schema. Measured on one laptop.
+---
+test pg_lease_expiry_reclaims ... ok
+test pg_idempotency_conflict_detected ... ok
+test pg_enqueue_and_claim ... ok
+test pg_dead_letter_and_replay ... ok
+test pg_claim_skips_locked_rows ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.00s
