@@ -11,6 +11,7 @@ macro_rules! summary_cols {
     };
 }
 
+mod postgres;
 mod sqlite;
 
 #[derive(Debug, Clone, FromRow)]
@@ -103,6 +104,7 @@ pub fn hash_hex(data: &[u8]) -> String {
 #[derive(Clone)]
 pub enum Store {
     Sqlite(sqlite::SqliteStore),
+    Postgres(postgres::PgStore),
 }
 
 impl Store {
@@ -112,7 +114,7 @@ impl Store {
             return Ok(Store::Sqlite(sqlite::SqliteStore::connect(url).await?));
         }
         if url.starts_with("postgres:") || url.starts_with("postgresql:") {
-            anyhow::bail!("postgres backend not built");
+            return Ok(Store::Postgres(postgres::PgStore::connect(url).await?));
         }
         anyhow::bail!("unknown database url scheme (use sqlite: or postgres:)")
     }
@@ -120,6 +122,7 @@ impl Store {
     pub async fn ping(&self) -> Result<(), sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.ping().await,
+            Store::Postgres(s) => s.ping().await,
         }
     }
 
@@ -131,18 +134,21 @@ impl Store {
     ) -> Result<bool, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.create_tenant_if_absent(id, api_key_hash, secret).await,
+            Store::Postgres(s) => s.create_tenant_if_absent(id, api_key_hash, secret).await,
         }
     }
 
     pub async fn tenant_by_key_hash(&self, hash: &str) -> Result<Option<TenantRow>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.tenant_by_key_hash(hash).await,
+            Store::Postgres(s) => s.tenant_by_key_hash(hash).await,
         }
     }
 
     pub async fn tenant_by_id(&self, id: &str) -> Result<Option<TenantRow>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.tenant_by_id(id).await,
+            Store::Postgres(s) => s.tenant_by_id(id).await,
         }
     }
 
@@ -154,30 +160,35 @@ impl Store {
     ) -> Result<bool, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.rotate_secret(id, new_secret, prev_expires_at).await,
+            Store::Postgres(s) => s.rotate_secret(id, new_secret, prev_expires_at).await,
         }
     }
 
     pub async fn enqueue(&self, e: &NewEvent<'_>) -> Result<Enqueued, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.enqueue(e).await,
+            Store::Postgres(s) => s.enqueue(e).await,
         }
     }
 
     pub async fn claim(&self, now: i64, lease_ms: i64) -> Result<Option<Claimed>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.claim(now, lease_ms).await,
+            Store::Postgres(s) => s.claim(now, lease_ms).await,
         }
     }
 
     pub async fn mark_delivered(&self, id: &str) -> Result<(), sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.mark_delivered(id).await,
+            Store::Postgres(s) => s.mark_delivered(id).await,
         }
     }
 
     pub async fn mark_filtered(&self, id: &str) -> Result<(), sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.mark_filtered(id).await,
+            Store::Postgres(s) => s.mark_filtered(id).await,
         }
     }
 
@@ -189,30 +200,35 @@ impl Store {
     ) -> Result<(), sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.schedule_retry(id, next_at, err).await,
+            Store::Postgres(s) => s.schedule_retry(id, next_at, err).await,
         }
     }
 
     pub async fn release(&self, id: &str, next_at: i64) -> Result<(), sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.release(id, next_at).await,
+            Store::Postgres(s) => s.release(id, next_at).await,
         }
     }
 
     pub async fn dead_letter(&self, id: &str, err: &str) -> Result<(), sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.dead_letter(id, err).await,
+            Store::Postgres(s) => s.dead_letter(id, err).await,
         }
     }
 
     pub async fn replay(&self, id: &str) -> Result<bool, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.replay(id).await,
+            Store::Postgres(s) => s.replay(id).await,
         }
     }
 
     pub async fn replay_all_dead(&self) -> Result<u64, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.replay_all_dead().await,
+            Store::Postgres(s) => s.replay_all_dead().await,
         }
     }
 
@@ -224,24 +240,28 @@ impl Store {
     ) -> Result<Vec<EventSummary>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.list_events(status, tenant, limit).await,
+            Store::Postgres(s) => s.list_events(status, tenant, limit).await,
         }
     }
 
     pub async fn get_event(&self, id: &str) -> Result<Option<EventDetail>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.get_event(id).await,
+            Store::Postgres(s) => s.get_event(id).await,
         }
     }
 
     pub async fn list_dead_letters(&self, limit: i64) -> Result<Vec<DeadLetter>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.list_dead_letters(limit).await,
+            Store::Postgres(s) => s.list_dead_letters(limit).await,
         }
     }
 
     pub async fn depth(&self) -> Result<Vec<(String, i64)>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.depth().await,
+            Store::Postgres(s) => s.depth().await,
         }
     }
 }
