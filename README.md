@@ -16,6 +16,35 @@ It answers one question from a customer: "If I send you an event, will it arrive
 | Observe | JSON logs with request ids, Prometheus counters and histograms, queue depth |
 | Shutdown | SIGTERM stops new requests and lets workers finish the event they hold |
 
+## Verified locally
+
+All rows ran on one laptop (measured on one laptop). The load tool and the services shared the machine.
+
+| Claim | Command | Evidence | Date |
+|---|---|---|---|
+| Full suite on SQLite and on Postgres 16 | `scripts/test-both-backends.sh` | `docs/engagement/evidence/dual-backend-tests.txt` | 2026-11-09 |
+| Postgres store with a SKIP LOCKED claim | `cargo test --test pg_store` with `GATEWAY_TEST_PG_URL` | `docs/engagement/evidence/pg-store-tests.txt` | 2026-11-09 |
+| Versioned migrations, old database files adopted | `cargo test --test migrations` | `tests/migrations.rs` | 2026-11-09 |
+| 503 backpressure with Retry-After, retry budget | `cargo test --test gateway backpressure retry_budget` | `tests/gateway.rs` | 2026-11-09 |
+| Kill -9 redrive lab: 500 of 500 events applied once at the mock | `scripts/failure-lab-redrive.sh sqlite` and `postgres` | `docs/engagement/evidence/failure-lab-redrive-*.txt` | 2026-11-09 |
+| Delivery SLO alerts proven with promtool | `promtool test rules` | `docs/engagement/evidence/promtool-delivery-slo.txt` | 2026-11-09 |
+| Sealed signing secrets and reseal | `cargo test --test secrets` | `tests/secrets.rs` | 2026-11-09 |
+| Security scans: gitleaks, trivy (source), cargo audit | see `docs/engagement/SECURITY-GATE.md` | `docs/engagement/evidence/security-gate-local.txt` | 2026-11-09 |
+| k6 and Rust load tool against ingest (measured on one laptop) | `scripts/k6-ingest.sh` | `docs/engagement/evidence/k6-ingest.txt` | 2026-11-09 |
+| OTel spans `ingest`, `claim`, `deliver` in one Jaeger trace | `scripts/trace-run.sh` | `docs/engagement/evidence/jaeger-delivery-trace.json` | 2026-11-09 |
+| Podman image build, Trivy scan, SBOM | `podman build` and `trivy image` | `docs/engagement/evidence/image-build.txt` | 2026-11-09 |
+
+Test counts from a real run (`scripts/test-both-backends.sh`, Postgres leg): 88 on each backend: 51 unit, 2 mock downstream, 20 integration, 3 migration, 5 Postgres store, 7 secrets.
+
+## Authored, not run
+
+| File | What it would do | Why it did not run |
+|---|---|---|
+| `.github/workflows/ci.yml` (backend matrix with a Postgres service) | Run the suite on both backends on GitHub | Authored, not run: this file is written and syntax-checked with `actionlint 1.7.12`. It was not executed against GitHub Actions. Reason: needs GitHub Actions. |
+| `.github/workflows/security.yml` (CodeQL for Rust and four more jobs) | Run the security gate on GitHub | Authored, not run: this file is written and syntax-checked with `actionlint 1.7.12`. It was not executed against GitHub Actions. Reason: needs GitHub Actions. |
+| Cloud key service secret provider | Fetch the sealing key from a managed key service | Not built. Only the env and file providers exist. |
+| `docker compose` check of `docker-compose.yml` | Validate with the Docker plugin | The Docker compose plugin is not installed here. Only `podman compose config` ran. |
+
 ## Architecture
 
 ```mermaid

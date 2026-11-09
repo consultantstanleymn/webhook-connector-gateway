@@ -1,34 +1,38 @@
-# Evidence: Full test suite on SQLite and on Postgres
+# Evidence: Full test suite on SQLite and on Postgres (final state)
 label: VERIFIED LOCALLY
-date: 2026-11-09 08:38 UTC
-code commit: 2ef8f24441c163f5084223039073283450af2b5a
+date: 2026-11-09 10:17 UTC
+code commit: 5e12d30c5b149ed974a9e371c36e817acb4bec7a
 working tree clean at run time: yes
 machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
 command: scripts/test-both-backends.sh
-notes: Both runs passed: 37 unit, 16 integration, 3 migration and 5 Postgres store tests on each leg (the pg_store tests run on both legs because the Postgres URL is set). Postgres 16 in a local container. The CI matrix was not run on GitHub. Measured on one laptop.
+notes: Both legs passed with 88 tests each: 51 unit, 2 mock downstream, 20 integration, 3 migration, 5 Postgres store, 7 secrets. Postgres 16 in a local container. The CI matrix was not run on GitHub. Measured on one laptop.
 ---
 === run 1: backend sqlite
-test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.15s
+test result: ok. 51 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-     Running tests/gateway.rs (target/debug/deps/gateway-f51766c85b6d7dfa)
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s
-     Running tests/migrations.rs (target/debug/deps/migrations-d8ab51a24af56f74)
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-     Running tests/pg_store.rs (target/debug/deps/pg_store-6a87e13a79221cae)
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/gateway.rs (target/debug/deps/gateway-5716e68049484551)
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.96s
+     Running tests/migrations.rs (target/debug/deps/migrations-b1fd9e0bceb54bf9)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/pg_store.rs (target/debug/deps/pg_store-d4fe5156eccd2343)
 test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.52s
+     Running tests/secrets.rs (target/debug/deps/secrets-f6795ff87d57bec7)
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.16s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 === run 2: backend postgres
-test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+test result: ok. 51 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.10s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
-     Running tests/gateway.rs (target/debug/deps/gateway-f51766c85b6d7dfa)
-test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 5.16s
-     Running tests/migrations.rs (target/debug/deps/migrations-d8ab51a24af56f74)
-test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
-     Running tests/pg_store.rs (target/debug/deps/pg_store-6a87e13a79221cae)
-test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.74s
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/gateway.rs (target/debug/deps/gateway-5716e68049484551)
+test result: ok. 20 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 7.42s
+     Running tests/migrations.rs (target/debug/deps/migrations-b1fd9e0bceb54bf9)
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+     Running tests/pg_store.rs (target/debug/deps/pg_store-d4fe5156eccd2343)
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.44s
+     Running tests/secrets.rs (target/debug/deps/secrets-f6795ff87d57bec7)
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.92s
 test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
 exit=0
