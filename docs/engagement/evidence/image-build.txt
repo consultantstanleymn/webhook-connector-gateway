@@ -1,0 +1,38 @@
+# Evidence: Container image build, Trivy scan and compose config
+label: VERIFIED LOCALLY
+date: 2026-11-09 10:16 UTC
+code commit: a837abf0cd517540d76ac04503a4380e2dc12ee8
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: podman build -t localhost/webhook-connector-gateway:dev .; trivy image --severity HIGH,CRITICAL --ignore-unfixed localhost/webhook-connector-gateway:dev; podman compose -f docker-compose.yml config -q
+notes: The first build failed because migrations/ was not copied (fixed in the Dockerfile). The docker compose plugin is not installed on this machine, so only podman compose was checked. The SBOMs are sbom-source.cdx.json and sbom-image.cdx.json.
+---
+== podman build (tail)
+[2/2] STEP 10/10: CMD ["serve"]
+[2/2] COMMIT localhost/webhook-connector-gateway:dev
+--> 01e6bf2df252
+Successfully tagged localhost/webhook-connector-gateway:sec
+Successfully tagged localhost/webhook-connector-gateway:dev
+01e6bf2df2520f17baff9122a02706383b1b0c83730edbba8984fac46ce71c62
+== images
+localhost/webhook-connector-gateway:dev 95.4 MB
+localhost/webhook-connector-gateway:sec 95.4 MB
+== trivy image (HIGH,CRITICAL, fixed only)
+2026-11-09T05:16:56-05:00	INFO	[secret] Please see https://trivy.dev/docs/v0.69/guide/scanner/secret#recommendation for faster secret detection
+2026-11-09T05:16:56-05:00	INFO	Detected OS	family="debian" version="12.15"
+2026-11-09T05:16:56-05:00	INFO	[debian] Detecting vulnerabilities...	os_version="12" pkg_num=88
+2026-11-09T05:16:56-05:00	INFO	Number of language-specific files	num=0
+2026-11-09T05:16:56-05:00	WARN	Using severities from other vendors for some vulnerabilities. Read https://trivy.dev/docs/v0.69/guide/scanner/vulnerability#severity-selection for details.
+Report Summary
+┌────────────────────────────────────────────────────────┬────────┬─────────────────┬─────────┐
+│                         Target                         │  Type  │ Vulnerabilities │ Secrets │
+├────────────────────────────────────────────────────────┼────────┼─────────────────┼─────────┤
+│ localhost/webhook-connector-gateway:dev (debian 12.15) │ debian │        0        │    -    │
+└────────────────────────────────────────────────────────┴────────┴─────────────────┴─────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+== compose config
+exit=0
+== docker compose plugin
+docker: unknown command: docker compose

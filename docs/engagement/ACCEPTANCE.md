@@ -13,4 +13,4 @@ Written before the code. Status values: not started, met locally, authored not r
 | R-7 | A k6 load test next to the Rust load tool, with results in PERF.md. | k6 summary committed | `load/ingest.js` | see proof column | met locally |
 | R-8 | OTel span export to Jaeger: ingest, claim, deliver. | trace JSON with three span names | `docs/engagement/evidence/jaeger-delivery-trace.json` | docs/engagement/evidence/jaeger-delivery-trace.json | met locally |
 | R-9 | Signing secrets are encrypted at rest with a key from a secret provider. | DB rows hold no plain secret; rotation test passes | `tests/secrets.rs` | see proof column | met locally |
-| R-10 | The container image builds with podman and passes a Trivy scan. CI files are linted. | build log, trivy output | `docs/engagement/evidence/image-build.txt` | docs/engagement/evidence/image-build.txt | not started |
+| R-10 | The container image builds with podman and passes a Trivy scan. CI files are linted. | build log, trivy output | `docs/engagement/evidence/image-build.txt` | docs/engagement/evidence/image-build.txt | met locally (image, scan, config); authored, not run (CI) |

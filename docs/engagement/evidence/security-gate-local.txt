@@ -1,0 +1,65 @@
+# Evidence: Security gate checks run locally
+label: VERIFIED LOCALLY
+date: 2026-11-09 10:16 UTC
+code commit: a837abf0cd517540d76ac04503a4380e2dc12ee8
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: see docs/engagement/SECURITY-GATE.md section Run each check locally
+notes: All local checks exit 0. cargo audit ran with the accepted exception RUSTSEC-2026-0459. The GitHub workflow was not run.
+---
+$ gitleaks git --config .gitleaks.toml --redact --no-banner --exit-code 1 .
+5:16AM INF 32 commits scanned.
+5:16AM INF scanned ~424914 bytes (424.91 KB) in 270ms
+5:16AM INF no leaks found
+exit=0
+$ timeout 120 gitleaks dir --config .gitleaks.toml --redact --no-banner .
+5:16AM INF scanned ~383767 bytes (383.77 KB) in 230ms
+5:16AM INF no leaks found
+exit=0
+$ cargo audit --ignore RUSTSEC-2026-0459
+    Fetching advisory database from `https://github.com/RustSec/advisory-db.git`
+      Loaded 1428 security advisories (from ~/.cargo/advisory-db)
+    Updating crates.io index
+    Scanning Cargo.lock for vulnerabilities (336 crate dependencies)
+exit=0
+$ trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --skip-dirs target --skip-version-check .
+2026-11-09T05:16:13-05:00	INFO	[vuln] Vulnerability scanning is enabled
+2026-11-09T05:16:14-05:00	INFO	Number of language-specific files	num=1
+2026-11-09T05:16:14-05:00	INFO	[cargo] Detecting vulnerabilities...
+Report Summary
+┌────────────┬───────┬─────────────────┐
+│   Target   │ Type  │ Vulnerabilities │
+├────────────┼───────┼─────────────────┤
+│ Cargo.lock │ cargo │        0        │
+└────────────┴───────┴─────────────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+exit=0
+$ trivy image --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 --skip-version-check localhost/webhook-connector-gateway:sec
+2026-11-09T05:16:14-05:00	INFO	[vuln] Vulnerability scanning is enabled
+2026-11-09T05:16:14-05:00	INFO	[secret] Secret scanning is enabled
+2026-11-09T05:16:14-05:00	INFO	[secret] If your scanning is slow, please try '--scanners vuln' to disable secret scanning
+2026-11-09T05:16:14-05:00	INFO	[secret] Please see https://trivy.dev/docs/v0.69/guide/scanner/secret#recommendation for faster secret detection
+2026-11-09T05:16:14-05:00	INFO	Detected OS	family="debian" version="12.15"
+2026-11-09T05:16:14-05:00	INFO	[debian] Detecting vulnerabilities...	os_version="12" pkg_num=88
+2026-11-09T05:16:14-05:00	INFO	Number of language-specific files	num=0
+2026-11-09T05:16:14-05:00	WARN	Using severities from other vendors for some vulnerabilities. Read https://trivy.dev/docs/v0.69/guide/scanner/vulnerability#severity-selection for details.
+Report Summary
+┌────────────────────────────────────────────────────────┬────────┬─────────────────┬─────────┐
+│                         Target                         │  Type  │ Vulnerabilities │ Secrets │
+├────────────────────────────────────────────────────────┼────────┼─────────────────┼─────────┤
+│ localhost/webhook-connector-gateway:sec (debian 12.15) │ debian │        0        │    -    │
+└────────────────────────────────────────────────────────┴────────┴─────────────────┴─────────┘
+Legend:
+- '-': Not scanned
+- '0': Clean (no security findings detected)
+exit=0
+$ actionlint .github/workflows/security.yml .github/workflows/ci.yml
+exit=0
+$ python3 scripts/check_security_exceptions.py security/exceptions.json
+OK exceptions file is valid
+exit=0
+$ scripts/test_check_security_exceptions.sh
+all exception checker cases behave as expected
+exit=0
