@@ -9,44 +9,51 @@ use sqlx::{FromRow, SqlitePool};
 use std::str::FromStr;
 use std::time::Duration;
 
-const SCHEMA: &str = r#"
-CREATE TABLE IF NOT EXISTS tenants (
-    id              TEXT PRIMARY KEY,
-    api_key_hash    TEXT NOT NULL UNIQUE,
-    secret          TEXT NOT NULL,
-    prev_secret     TEXT,
-    prev_expires_at INTEGER,
-    created_at      INTEGER NOT NULL
-);
-CREATE TABLE IF NOT EXISTS events (
-    id              TEXT PRIMARY KEY,
-    tenant_id       TEXT NOT NULL,
-    idempotency_key TEXT NOT NULL,
-    payload_hash    TEXT NOT NULL,
-    payload         TEXT NOT NULL,
-    trace_id        TEXT NOT NULL,
-    status          TEXT NOT NULL,
-    attempts        INTEGER NOT NULL DEFAULT 0,
-    next_attempt_at INTEGER NOT NULL,
-    locked_until    INTEGER NOT NULL DEFAULT 0,
-    last_error      TEXT,
-    created_at      INTEGER NOT NULL,
-    updated_at      INTEGER NOT NULL,
-    UNIQUE (tenant_id, idempotency_key)
-);
-CREATE INDEX IF NOT EXISTS events_pending_idx ON events (next_attempt_at) WHERE status = 'pending';
-CREATE INDEX IF NOT EXISTS events_processing_idx ON events (locked_until) WHERE status = 'processing';
-CREATE INDEX IF NOT EXISTS events_tenant_idx ON events (tenant_id, created_at);
-CREATE TABLE IF NOT EXISTS dead_letters (
-    event_id    TEXT PRIMARY KEY,
-    tenant_id   TEXT NOT NULL,
-    payload     TEXT NOT NULL,
-    attempts    INTEGER NOT NULL,
-    last_error  TEXT NOT NULL,
-    died_at     INTEGER NOT NULL,
-    replayed_at INTEGER
-);
-"#;
+/// Versioned migrations. The files live in `migrations/sqlite`.
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/sqlite");
+
+/// A database file made by the code before migrations has the tables but no
+/// `_sqlx_migrations` table. Record the baseline migration as applied, so the
+/// DDL does not run again on top of existing data (DECISIONS entry 16).
+async fn adopt_legacy_database(pool: &SqlitePool) -> anyhow::Result<()> {
+    let has = |name: &'static str| {
+        sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = ?",
+        )
+        .bind(name)
+    };
+    let legacy = has("events").fetch_one(pool).await? > 0;
+    let versioned = has("_sqlx_migrations").fetch_one(pool).await? > 0;
+    if !legacy || versioned {
+        return Ok(());
+    }
+    let baseline = MIGRATOR
+        .iter()
+        .next()
+        .ok_or_else(|| anyhow::anyhow!("no baseline migration"))?;
+    sqlx::query(
+        "CREATE TABLE _sqlx_migrations (
+            version BIGINT PRIMARY KEY,
+            description TEXT NOT NULL,
+            installed_on TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            success BOOLEAN NOT NULL,
+            checksum BLOB NOT NULL,
+            execution_time BIGINT NOT NULL
+        )",
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query(
+        "INSERT INTO _sqlx_migrations (version, description, success, checksum, execution_time)
+         VALUES (?, ?, TRUE, ?, -1)",
+    )
+    .bind(baseline.version)
+    .bind(baseline.description.to_string())
+    .bind(baseline.checksum.to_vec())
+    .execute(pool)
+    .await?;
+    Ok(())
+}
 
 #[derive(Clone)]
 pub struct Store {
@@ -162,7 +169,8 @@ impl Store {
     }
 
     async fn migrate(&self) -> anyhow::Result<()> {
-        sqlx::raw_sql(SCHEMA).execute(&self.pool).await?;
+        adopt_legacy_database(&self.pool).await?;
+        MIGRATOR.run(&self.pool).await?;
         Ok(())
     }
 

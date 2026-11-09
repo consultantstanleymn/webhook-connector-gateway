@@ -49,3 +49,6 @@ Labels are tenant, route, status, outcome. The route label is the route pattern 
 
 ## 16. Few dependencies, no `unsafe`
 No `unsafe` in this repo. The hand-made mock downstream in tests replaces a mock library. `rustls` is used for HTTPS so the build does not need OpenSSL headers.
+
+## 17. Versioned migrations and adoption of old database files
+The schema now lives in `migrations/<backend>/NNNN_name.sql` and `sqlx::migrate!` applies it. An old database file has the tables but no `_sqlx_migrations` table. On start, the code records migration 1 as applied with the real checksum, so the DDL does not run again over existing data. Migrations are never edited after release. A change is a new numbered file.
