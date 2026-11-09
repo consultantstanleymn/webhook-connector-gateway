@@ -41,6 +41,10 @@ pub struct QueueCfg {
     /// How long a claimed event is reserved for one worker.
     pub lease_ms: i64,
     pub shutdown_grace_secs: u64,
+    /// Ingest answers 503 when pending plus processing events reach this number.
+    pub max_pending: i64,
+    /// The Retry-After value for that 503, in seconds.
+    pub retry_after_secs: u64,
 }
 
 impl Default for QueueCfg {
@@ -53,6 +57,8 @@ impl Default for QueueCfg {
             poll_ms: 500,
             lease_ms: 60_000,
             shutdown_grace_secs: 20,
+            max_pending: 50_000,
+            retry_after_secs: 5,
         }
     }
 }

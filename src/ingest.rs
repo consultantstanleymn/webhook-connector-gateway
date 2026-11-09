@@ -118,6 +118,8 @@ async fn ingest_inner(
         .and_then(trace::parse_traceparent)
         .unwrap_or_else(trace::new_trace_id);
 
+    check_backpressure(st).await?;
+
     let id = uuid::Uuid::new_v4().to_string();
     let outcome = st
         .store
@@ -131,6 +133,7 @@ async fn ingest_inner(
         .await?;
     match outcome {
         Enqueued::New => {
+            bump_pending(st);
             st.metrics
                 .events_received
                 .with_label_values(&[&tenant.id])
@@ -150,4 +153,41 @@ async fn ingest_inner(
             "this Idempotency-Key was used with a different body".into(),
         )),
     }
+}
+
+/// How long a read of the pending count stays valid.
+const PENDING_CACHE_MS: u128 = 250;
+
+/// Refuse new events when pending plus processing events reach `max_pending`.
+/// The count is cached for 250 ms, and each accepted event adds one to the
+/// cache, so a burst cannot pass the limit between two reads.
+async fn check_backpressure(st: &AppState) -> Result<(), ApiError> {
+    let stale = {
+        let c = st.pending_cache.lock().unwrap_or_else(|e| e.into_inner());
+        c.0.elapsed().as_millis() >= PENDING_CACHE_MS
+    };
+    if stale {
+        let rows = st.store.depth().await?;
+        let n: i64 = rows
+            .iter()
+            .filter(|(s, _)| s == "pending" || s == "processing")
+            .map(|(_, n)| *n)
+            .sum();
+        *st.pending_cache.lock().unwrap_or_else(|e| e.into_inner()) = (Instant::now(), n);
+    }
+    let n = st.pending_cache.lock().unwrap_or_else(|e| e.into_inner()).1;
+    if n >= st.cfg.queue.max_pending {
+        st.metrics
+            .ingest_shed
+            .with_label_values(&["queue_full"])
+            .inc();
+        return Err(ApiError::QueueFull {
+            retry_after_secs: st.cfg.queue.retry_after_secs,
+        });
+    }
+    Ok(())
+}
+
+fn bump_pending(st: &AppState) {
+    st.pending_cache.lock().unwrap_or_else(|e| e.into_inner()).1 += 1;
 }

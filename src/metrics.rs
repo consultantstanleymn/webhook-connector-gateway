@@ -13,6 +13,8 @@ pub struct Metrics {
     pub http_duration: HistogramVec,
     pub delivery_duration: HistogramVec,
     pub queue_depth: IntGaugeVec,
+    /// Requests refused to protect the queue. The reason label is a fixed set.
+    pub ingest_shed: CounterVec,
 }
 
 const BUCKETS: &[f64] = &[
@@ -66,6 +68,15 @@ impl Metrics {
             &["status"],
         )
         .expect("valid metric");
+        let ingest_shed = CounterVec::new(
+            Opts::new(
+                "gateway_ingest_shed_total",
+                "Ingest requests refused by backpressure",
+            ),
+            &["reason"],
+        )
+        .expect("valid metric");
+        ingest_shed.with_label_values(&["queue_full"]).inc_by(0.0);
         for c in [
             Box::new(events_received.clone()) as Box<dyn prometheus::core::Collector>,
             Box::new(requests_rejected.clone()),
@@ -73,6 +84,7 @@ impl Metrics {
             Box::new(http_duration.clone()),
             Box::new(delivery_duration.clone()),
             Box::new(queue_depth.clone()),
+            Box::new(ingest_shed.clone()),
         ] {
             registry.register(c).expect("register once");
         }
@@ -84,6 +96,7 @@ impl Metrics {
             http_duration,
             delivery_duration,
             queue_depth,
+            ingest_shed,
         }
     }
 

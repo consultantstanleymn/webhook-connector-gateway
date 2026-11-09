@@ -91,3 +91,25 @@ The "before" numbers were taken from the first perf run, which had no drain meas
 - The mock downstream answers at once. A real downstream with 100 ms latency would lower the drain rate with 4 workers (roughly 4 / 0.1 = 40 events/s), so raise `queue.workers` for slow downstreams.
 - `synchronous=NORMAL` is used (see DECISIONS.md). `FULL` would be slower.
 - The k6 tool is not used. The load tool is a Rust binary in this repo.
+
+## Drain math and backpressure
+
+The gateway refuses new events with 503 and `Retry-After` when pending plus processing events reach `queue.max_pending` (default 50,000). This section shows how to pick that limit.
+
+With W workers, a mean delivery time T seconds and a downstream success share p, the drain rate is about:
+
+```
+drain rate = W * p / T   events per second
+```
+
+If events arrive at rate A and A is below the drain rate, the backlog B shrinks. The time to drain it is:
+
+```
+time to drain = B / (drain rate - A)
+```
+
+If A is above the drain rate, the backlog grows without bound. Backpressure then protects the database and the memory of the host.
+
+Worked example, using the numbers above (measured on one laptop, load tool and mock on the same machine): the 4 workers drained about 2,200 events per second with a fast mock. Take p = 1 and no arrivals. A backlog of 50,000 events then drains in about 50,000 / 2,200 = 23 seconds. Real ERP downstreams are slower. If T is 0.2 s, then W = 4 gives 4 / 0.2 = 20 events per second, and the same backlog needs about 2,500 seconds (42 minutes). Choose `max_pending` from the longest wait that the customer accepts: `max_pending = drain rate * accepted wait`. The 2,200 events per second figure comes from the fast mock, so it is an upper bound, not a forecast for a real ERP.
+
+`Retry-After` tells senders when to try again. The default is 5 seconds (`queue.retry_after_secs`). The counter `gateway_ingest_shed_total{reason="queue_full"}` counts refused requests.

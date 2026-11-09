@@ -530,3 +530,70 @@ async fn events_survive_a_restart_before_delivery() {
     assert!(rt2.engine.process_one().await.unwrap());
     assert_eq!(mock.recorded().len(), 1);
 }
+
+#[tokio::test]
+async fn backpressure_returns_503_with_retry_after() {
+    let h = Harness::start_with(|c| {
+        c.queue.max_pending = 3;
+        c.queue.max_attempts = 1000;
+    })
+    .await;
+    h.mock.force_status.store(503, Ordering::SeqCst);
+    let mut codes = vec![];
+    let mut last = None;
+    for i in 0..4 {
+        let r = h.post(ORDER, Some(&format!("bp-{i}"))).await;
+        codes.push(r.status().as_u16());
+        last = Some(r);
+    }
+    assert_eq!(codes, vec![202, 202, 202, 503]);
+    let last = last.unwrap();
+    assert_eq!(last.headers().get("retry-after").unwrap(), "5");
+    let body: serde_json::Value = last.json().await.unwrap();
+    assert_eq!(body["error"]["code"], "queue_full");
+}
+
+#[tokio::test]
+async fn backpressure_metric_increments() {
+    let h = Harness::start_with(|c| {
+        c.queue.max_pending = 1;
+        c.queue.max_attempts = 1000;
+    })
+    .await;
+    h.mock.force_status.store(503, Ordering::SeqCst);
+    h.post(ORDER, Some("m-1")).await;
+    let shed = h.post(ORDER, Some("m-2")).await;
+    assert_eq!(shed.status().as_u16(), 503);
+    let text = h
+        .client
+        .get(format!("{}/metrics", h.base))
+        .send()
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    assert!(
+        text.contains("gateway_ingest_shed_total{reason=\"queue_full\"} 1"),
+        "metric missing in: {text}"
+    );
+}
+
+#[tokio::test]
+async fn ingest_recovers_after_drain() {
+    let h = Harness::start_with(|c| {
+        c.queue.max_pending = 2;
+        c.queue.max_attempts = 1000;
+    })
+    .await;
+    h.mock.force_status.store(503, Ordering::SeqCst);
+    let a = id_of(h.post(ORDER, Some("r-1")).await).await;
+    let b = id_of(h.post(ORDER, Some("r-2")).await).await;
+    assert_eq!(h.post(ORDER, Some("r-3")).await.status().as_u16(), 503);
+    h.mock.force_status.store(0, Ordering::SeqCst);
+    h.wait_status(&a, "delivered").await;
+    h.wait_status(&b, "delivered").await;
+    // Wait past the 250 ms cache so the new count is read.
+    tokio::time::sleep(std::time::Duration::from_millis(400)).await;
+    assert_eq!(h.post(ORDER, Some("r-4")).await.status().as_u16(), 202);
+}

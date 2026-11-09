@@ -15,6 +15,8 @@ pub enum ApiError {
     BadRequest(String),
     #[error("rate limit exceeded")]
     RateLimited { retry_after_secs: u64 },
+    #[error("the queue is full, retry later")]
+    QueueFull { retry_after_secs: u64 },
     #[error("{0}")]
     NotFound(String),
     #[error("{0}")]
@@ -32,6 +34,7 @@ impl ApiError {
             ApiError::Unauthorized(c) => c,
             ApiError::BadRequest(_) => "bad_request",
             ApiError::RateLimited { .. } => "rate_limited",
+            ApiError::QueueFull { .. } => "queue_full",
             ApiError::NotFound(_) => "not_found",
             ApiError::Conflict(_) => "idempotency_conflict",
             ApiError::AdminDisabled => "admin_disabled",
@@ -44,6 +47,7 @@ impl ApiError {
             ApiError::Unauthorized(_) => StatusCode::UNAUTHORIZED,
             ApiError::BadRequest(_) => StatusCode::BAD_REQUEST,
             ApiError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
+            ApiError::QueueFull { .. } => StatusCode::SERVICE_UNAVAILABLE,
             ApiError::NotFound(_) => StatusCode::NOT_FOUND,
             ApiError::Conflict(_) => StatusCode::UNPROCESSABLE_ENTITY,
             ApiError::AdminDisabled => StatusCode::SERVICE_UNAVAILABLE,
@@ -89,7 +93,9 @@ impl IntoResponse for ApiError {
             Json(json!({ "error": { "code": self.code(), "message": message } })),
         )
             .into_response();
-        if let ApiError::RateLimited { retry_after_secs } = self {
+        if let ApiError::RateLimited { retry_after_secs }
+        | ApiError::QueueFull { retry_after_secs } = self
+        {
             if let Ok(v) = HeaderValue::from_str(&retry_after_secs.to_string()) {
                 res.headers_mut().insert(RETRY_AFTER, v);
             }

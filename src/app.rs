@@ -23,6 +23,8 @@ pub struct AppState {
     pub metrics: Metrics,
     /// Wakes idle workers when an event arrives.
     pub notify: Arc<Notify>,
+    /// Cached count of pending and processing events: when it was read, and the count.
+    pub pending_cache: Arc<std::sync::Mutex<(std::time::Instant, i64)>>,
 }
 
 impl AppState {
@@ -33,6 +35,10 @@ impl AppState {
             limiter: Arc::new(RateLimiter::default()),
             metrics,
             notify,
+            pending_cache: Arc::new(std::sync::Mutex::new((
+                std::time::Instant::now() - std::time::Duration::from_secs(60),
+                0,
+            ))),
         }
     }
 }
