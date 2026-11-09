@@ -1,11 +1,11 @@
-//! SQL storage. All SQL lives here, so a Postgres backend means one new
-//! implementation of this module (see docs/DECISIONS.md).
+//! SQLite adapter of the store port.
 
+use super::{
+    Claimed, DeadLetter, Enqueued, EventDetail, EventSummary, NewEvent, TenantRow, hash_hex,
+};
 use crate::now_ms;
-use serde::Serialize;
-use sha2::{Digest, Sha256};
+use sqlx::SqlitePool;
 use sqlx::sqlite::{SqliteConnectOptions, SqliteJournalMode, SqlitePoolOptions, SqliteSynchronous};
-use sqlx::{FromRow, SqlitePool};
 use std::str::FromStr;
 use std::time::Duration;
 
@@ -56,103 +56,11 @@ async fn adopt_legacy_database(pool: &SqlitePool) -> anyhow::Result<()> {
 }
 
 #[derive(Clone)]
-pub struct Store {
+pub struct SqliteStore {
     pool: SqlitePool,
 }
 
-#[derive(Debug, Clone, FromRow)]
-pub struct TenantRow {
-    pub id: String,
-    pub secret: String,
-    pub prev_secret: Option<String>,
-    pub prev_expires_at: Option<i64>,
-}
-
-impl TenantRow {
-    /// Secrets that are valid at `now_ms`: the current one, and the previous
-    /// one while its grace window is open.
-    pub fn valid_secrets(&self, now_ms: i64) -> Vec<&str> {
-        let mut v = vec![self.secret.as_str()];
-        if let (Some(p), Some(exp)) = (&self.prev_secret, self.prev_expires_at) {
-            if exp > now_ms {
-                v.push(p.as_str());
-            }
-        }
-        v
-    }
-}
-
-pub struct NewEvent<'a> {
-    pub id: &'a str,
-    pub tenant_id: &'a str,
-    pub idempotency_key: &'a str,
-    pub payload: &'a str,
-    pub trace_id: &'a str,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum Enqueued {
-    New,
-    Duplicate {
-        id: String,
-    },
-    /// Same key, different body.
-    Conflict,
-}
-
-#[derive(Debug, Clone, FromRow, Serialize)]
-pub struct EventSummary {
-    pub id: String,
-    pub tenant_id: String,
-    pub status: String,
-    pub attempts: i64,
-    pub next_attempt_at: i64,
-    pub last_error: Option<String>,
-    pub trace_id: String,
-    pub created_at: i64,
-    pub updated_at: i64,
-}
-
-#[derive(Debug, Clone, FromRow, Serialize)]
-pub struct EventDetail {
-    #[sqlx(flatten)]
-    #[serde(flatten)]
-    pub summary: EventSummary,
-    pub idempotency_key: String,
-    pub payload: String,
-}
-
-#[derive(Debug, Clone, FromRow)]
-pub struct Claimed {
-    pub id: String,
-    pub tenant_id: String,
-    pub payload: String,
-    pub trace_id: String,
-    pub attempts: i64,
-}
-
-#[derive(Debug, Clone, FromRow, Serialize)]
-pub struct DeadLetter {
-    pub event_id: String,
-    pub tenant_id: String,
-    pub payload: String,
-    pub attempts: i64,
-    pub last_error: String,
-    pub died_at: i64,
-    pub replayed_at: Option<i64>,
-}
-
-macro_rules! summary_cols {
-    () => {
-        "id, tenant_id, status, attempts, next_attempt_at, last_error, trace_id, created_at, updated_at"
-    };
-}
-
-pub fn hash_hex(data: &[u8]) -> String {
-    hex::encode(Sha256::digest(data))
-}
-
-impl Store {
+impl SqliteStore {
     pub async fn connect(url: &str) -> anyhow::Result<Self> {
         let opts = SqliteConnectOptions::from_str(url)?
             .create_if_missing(true)
@@ -482,9 +390,9 @@ impl Store {
 mod tests {
     use super::*;
 
-    async fn mem_store() -> Store {
+    async fn mem_store() -> SqliteStore {
         let path = std::env::temp_dir().join(format!("wcg-{}.db", uuid::Uuid::new_v4()));
-        Store::connect(&format!("sqlite://{}", path.display()))
+        SqliteStore::connect(&format!("sqlite://{}", path.display()))
             .await
             .unwrap()
     }

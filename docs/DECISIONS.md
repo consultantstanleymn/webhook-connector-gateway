@@ -52,3 +52,6 @@ No `unsafe` in this repo. The hand-made mock downstream in tests replaces a mock
 
 ## 17. Versioned migrations and adoption of old database files
 The schema now lives in `migrations/<backend>/NNNN_name.sql` and `sqlx::migrate!` applies it. An old database file has the tables but no `_sqlx_migrations` table. On start, the code records migration 1 as applied with the real checksum, so the DDL does not run again over existing data. Migrations are never edited after release. A change is a new numbered file.
+
+## 18. Store port as an enum, not a trait object
+The store is an enum with one variant for each backend (SQLite now, Postgres next). Rust async functions in traits are not object safe, so a `dyn Store` would need boxing or a helper crate. The backends are known and few. The compiler checks that every method handles every backend. A third backend means one new variant and one new match arm in each method.
