@@ -1,0 +1,27 @@
+# Evidence: Failure lab: kill -9 then redrive, postgres backend
+label: VERIFIED LOCALLY
+date: 2026-11-09 08:46 UTC
+code commit: b2a7e4f0a987d510eabbdd6b6f5b4551f59f9a0c
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: scripts/failure-lab-redrive.sh postgres
+notes: Debug build, one laptop, 500 events, mock fails 60 percent. Proves one applied effect for each event after redrive in this run. It does not prove exactly-once delivery. Measured on one laptop.
+---
+backend: postgres, events: 500
+uptime start:  03:46:11 up  4:02,  1 user,  load average: 7.79, 7.20, 5.48
+--- send 500 signed events while the mock fails 60 percent of calls
+requests:     500
+throughput:   192 req/s
+dead letters before the kill: 1, still pending or processing: 423
+--- kill -9 the gateway (pid 725218) during delivery
+mock stats right after the kill: {"calls":164,"duplicates":0,"ok":78,"received":164,"unique":78}
+--- the downstream recovers (fail rate 0), the gateway restarts
+--- redrive every dead letter: gateway replay --all
+replayed 2 events
+dead letters after redrive: 0, open events: 0
+events with status delivered (admin API): 500
+mock stats: {"calls":586,"duplicates":0,"ok":500,"received":586,"unique":500}
+applied at the downstream: unique=500 of 500, duplicate applications=0
+uptime end:  03:46:22 up  4:03,  1 user,  load average: 8.30, 7.33, 5.54
+RESULT: PASS (every event applied once by key)
+exit=0
