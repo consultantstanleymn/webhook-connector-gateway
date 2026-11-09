@@ -126,7 +126,7 @@ impl PgStore {
              WHERE id = (SELECT id FROM events
                          WHERE status = 'pending' AND next_attempt_at <= $2
                          ORDER BY next_attempt_at LIMIT 1 FOR UPDATE SKIP LOCKED)
-             RETURNING id, tenant_id, payload, trace_id, attempts",
+             RETURNING id, tenant_id, payload, trace_id, attempts, created_at",
         )
         .bind(now + lease_ms)
         .bind(now)
@@ -140,7 +140,7 @@ impl PgStore {
              WHERE id = (SELECT id FROM events
                          WHERE status = 'processing' AND locked_until <= $2
                          ORDER BY locked_until LIMIT 1 FOR UPDATE SKIP LOCKED)
-             RETURNING id, tenant_id, payload, trace_id, attempts",
+             RETURNING id, tenant_id, payload, trace_id, attempts, created_at",
         )
         .bind(now + lease_ms)
         .bind(now)

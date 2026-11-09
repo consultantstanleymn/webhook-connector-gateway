@@ -83,6 +83,7 @@ pub struct Claimed {
     pub payload: String,
     pub trace_id: String,
     pub attempts: i64,
+    pub created_at: i64,
 }
 
 #[derive(Debug, Clone, FromRow, Serialize)]

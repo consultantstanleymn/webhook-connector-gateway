@@ -1,0 +1,34 @@
+# Delivery SLO: 99 percent of accepted events are delivered within 60 s while the downstream is up.
+groups:
+- name: gateway-slo-recording
+  interval: 1m
+  rules:
+  - record: gateway:delivery_within_60s:ratio_rate5m
+    expr: sum(rate(gateway_delivery_latency_seconds_bucket{le="60"}[5m])) / sum(rate(gateway_delivery_latency_seconds_count[5m]))
+  - record: gateway:delivery_within_60s:ratio_rate30m
+    expr: sum(rate(gateway_delivery_latency_seconds_bucket{le="60"}[30m])) / sum(rate(gateway_delivery_latency_seconds_count[30m]))
+  - record: gateway:delivery_within_60s:ratio_rate1h
+    expr: sum(rate(gateway_delivery_latency_seconds_bucket{le="60"}[1h])) / sum(rate(gateway_delivery_latency_seconds_count[1h]))
+  - record: gateway:delivery_within_60s:ratio_rate6h
+    expr: sum(rate(gateway_delivery_latency_seconds_bucket{le="60"}[6h])) / sum(rate(gateway_delivery_latency_seconds_count[6h]))
+- name: gateway-slo-alerts
+  interval: 1m
+  rules:
+  - alert: GatewayDeliveryBurnFast
+    expr: (1 - gateway:delivery_within_60s:ratio_rate1h) > 0.144 and (1 - gateway:delivery_within_60s:ratio_rate5m) > 0.144 and on() (sum(rate(gateway_deliveries_total{outcome="delivered"}[10m])) / sum(rate(gateway_deliveries_total{outcome=~"delivered|retry|dead"}[10m]))
+      > 0.9)
+    for: 2m
+    labels:
+      severity: page
+    annotations:
+      summary: Delivery SLO error budget burns fast while the downstream is up (factor 14.4)
+      runbook_url: docs/engagement/RUNBOOK.md#delivery-slo-burn
+  - alert: GatewayDeliveryBurnSlow
+    expr: (1 - gateway:delivery_within_60s:ratio_rate6h) > 0.06 and (1 - gateway:delivery_within_60s:ratio_rate30m) > 0.06 and on() (sum(rate(gateway_deliveries_total{outcome="delivered"}[10m])) / sum(rate(gateway_deliveries_total{outcome=~"delivered|retry|dead"}[10m]))
+      > 0.9)
+    for: 15m
+    labels:
+      severity: ticket
+    annotations:
+      summary: Delivery SLO error budget burns slowly while the downstream is up (factor 6)
+      runbook_url: docs/engagement/RUNBOOK.md#delivery-slo-burn

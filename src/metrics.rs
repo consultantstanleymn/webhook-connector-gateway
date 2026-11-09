@@ -1,7 +1,8 @@
 //! Prometheus metrics.
 
 use prometheus::{
-    CounterVec, Encoder, HistogramOpts, HistogramVec, IntGaugeVec, Opts, Registry, TextEncoder,
+    CounterVec, Encoder, Histogram, HistogramOpts, HistogramVec, IntGaugeVec, Opts, Registry,
+    TextEncoder,
 };
 
 #[derive(Clone)]
@@ -17,7 +18,14 @@ pub struct Metrics {
     pub ingest_shed: CounterVec,
     /// Retries postponed because the tenant budget was used up.
     pub retry_budget_exhausted: CounterVec,
+    /// Time from accepting an event to its delivery.
+    pub delivery_latency: Histogram,
 }
+
+/// Buckets for the accept-to-delivery time, up to 5 minutes.
+const LATENCY_BUCKETS: &[f64] = &[
+    0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0, 300.0,
+];
 
 const BUCKETS: &[f64] = &[
     0.001, 0.0025, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
@@ -87,6 +95,14 @@ impl Metrics {
             &["tenant"],
         )
         .expect("valid metric");
+        let delivery_latency = Histogram::with_opts(
+            HistogramOpts::new(
+                "gateway_delivery_latency_seconds",
+                "Time from accepting an event to its delivery",
+            )
+            .buckets(LATENCY_BUCKETS.to_vec()),
+        )
+        .expect("valid metric");
         for c in [
             Box::new(events_received.clone()) as Box<dyn prometheus::core::Collector>,
             Box::new(requests_rejected.clone()),
@@ -96,6 +112,7 @@ impl Metrics {
             Box::new(queue_depth.clone()),
             Box::new(ingest_shed.clone()),
             Box::new(retry_budget_exhausted.clone()),
+            Box::new(delivery_latency.clone()),
         ] {
             registry.register(c).expect("register once");
         }
@@ -109,6 +126,7 @@ impl Metrics {
             queue_depth,
             ingest_shed,
             retry_budget_exhausted,
+            delivery_latency,
         }
     }
 
@@ -139,5 +157,20 @@ impl Metrics {
 impl Default for Metrics {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn delivery_latency_observed() {
+        let m = Metrics::new();
+        m.delivery_latency.observe(12.0);
+        let text = m.render();
+        assert!(text.contains("gateway_delivery_latency_seconds_bucket{le=\"60\"} 1"));
+        assert!(text.contains("gateway_delivery_latency_seconds_bucket{le=\"10\"} 0"));
+        assert!(text.contains("gateway_delivery_latency_seconds_count 1"));
     }
 }

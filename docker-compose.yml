@@ -23,6 +23,7 @@ services:
     ports: ["9090:9090"]
     volumes:
       - ./deploy/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/rules:/etc/prometheus/rules:ro
     depends_on: [gateway]
 volumes:
   gateway-data:

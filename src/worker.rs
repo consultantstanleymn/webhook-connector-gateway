@@ -165,6 +165,9 @@ impl Engine {
             DeliveryResult::Success => {
                 breaker.on_success();
                 self.store.mark_delivered(&ev.id).await?;
+                self.metrics
+                    .delivery_latency
+                    .observe(((now_ms() - ev.created_at).max(0) as f64) / 1000.0);
                 self.observe("delivered", secs);
                 info!("event delivered");
             }

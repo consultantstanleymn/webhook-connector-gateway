@@ -196,7 +196,7 @@ impl SqliteStore {
              WHERE id = (SELECT id FROM events
                          WHERE status = 'pending' AND next_attempt_at <= ?
                          ORDER BY next_attempt_at LIMIT 1)
-             RETURNING id, tenant_id, payload, trace_id, attempts",
+             RETURNING id, tenant_id, payload, trace_id, attempts, created_at",
         )
         .bind(now + lease_ms)
         .bind(now)
@@ -211,7 +211,7 @@ impl SqliteStore {
              WHERE id = (SELECT id FROM events
                          WHERE status = 'processing' AND locked_until <= ?
                          ORDER BY locked_until LIMIT 1)
-             RETURNING id, tenant_id, payload, trace_id, attempts",
+             RETURNING id, tenant_id, payload, trace_id, attempts, created_at",
         )
         .bind(now + lease_ms)
         .bind(now)

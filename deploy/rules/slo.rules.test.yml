@@ -1,0 +1,90 @@
+rule_files:
+  - slo.rules.yml
+evaluation_interval: 1m
+tests:
+  - interval: 1m
+    input_series:
+    - series: gateway_delivery_latency_seconds_count
+      values: 0+100x300
+    - series: gateway_delivery_latency_seconds_bucket{le="60"}
+      values: 0+50x300
+    - series: gateway_deliveries_total{outcome="delivered"}
+      values: 0+100x300
+    alert_rule_test:
+    - eval_time: 90m
+      alertname: GatewayDeliveryBurnFast
+      exp_alerts:
+      - exp_labels:
+          severity: page
+        exp_annotations:
+          summary: Delivery SLO error budget burns fast while the downstream is up (factor 14.4)
+          runbook_url: docs/engagement/RUNBOOK.md#delivery-slo-burn
+  - interval: 1m
+    input_series:
+    - series: gateway_delivery_latency_seconds_count
+      values: 0+100x300
+    - series: gateway_delivery_latency_seconds_bucket{le="60"}
+      values: 0+100x300
+    - series: gateway_deliveries_total{outcome="delivered"}
+      values: 0+100x300
+    alert_rule_test:
+    - eval_time: 90m
+      alertname: GatewayDeliveryBurnFast
+      exp_alerts: []
+  - interval: 1m
+    input_series:
+    - series: gateway_delivery_latency_seconds_count
+      values: 0+100x300
+    - series: gateway_delivery_latency_seconds_bucket{le="60"}
+      values: 0+50x300
+    - series: gateway_deliveries_total{outcome="delivered"}
+      values: 0+10x300
+    - series: gateway_deliveries_total{outcome="retry"}
+      values: 0+100x300
+    alert_rule_test:
+    - eval_time: 90m
+      alertname: GatewayDeliveryBurnFast
+      exp_alerts: []
+  - interval: 1m
+    input_series:
+    - series: gateway_delivery_latency_seconds_count
+      values: 0+100x300
+    - series: gateway_delivery_latency_seconds_bucket{le="60"}
+      values: 0+50x300
+    - series: gateway_deliveries_total{outcome="delivered"}
+      values: 0+100x300
+    alert_rule_test:
+    - eval_time: 200m
+      alertname: GatewayDeliveryBurnSlow
+      exp_alerts:
+      - exp_labels:
+          severity: ticket
+        exp_annotations:
+          summary: Delivery SLO error budget burns slowly while the downstream is up (factor 6)
+          runbook_url: docs/engagement/RUNBOOK.md#delivery-slo-burn
+  - interval: 1m
+    input_series:
+    - series: gateway_delivery_latency_seconds_count
+      values: 0+100x300
+    - series: gateway_delivery_latency_seconds_bucket{le="60"}
+      values: 0+100x300
+    - series: gateway_deliveries_total{outcome="delivered"}
+      values: 0+100x300
+    alert_rule_test:
+    - eval_time: 200m
+      alertname: GatewayDeliveryBurnSlow
+      exp_alerts: []
+  - interval: 1m
+    input_series:
+    - series: gateway_delivery_latency_seconds_count
+      values: 0+100x300
+    - series: gateway_delivery_latency_seconds_bucket{le="60"}
+      values: 0+50x300
+    - series: gateway_deliveries_total{outcome="delivered"}
+      values: 0+10x300
+    - series: gateway_deliveries_total{outcome="retry"}
+      values: 0+100x300
+    alert_rule_test:
+    - eval_time: 200m
+      alertname: GatewayDeliveryBurnSlow
+      exp_alerts: []
