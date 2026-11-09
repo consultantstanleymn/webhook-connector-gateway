@@ -10,6 +10,24 @@ env:
 jobs:
   rust:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        backend: [sqlite, postgres]
+    env:
+      GATEWAY_TEST_BACKEND: ${{ matrix.backend }}
+      GATEWAY_TEST_PG_URL: postgres://gw:gw@127.0.0.1:5432/gw_test
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: gw
+          POSTGRES_PASSWORD: gw
+          POSTGRES_DB: gw_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U gw" --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

@@ -98,15 +98,53 @@ pub struct Harness {
     pub server: JoinHandle<()>,
 }
 
-#[allow(clippy::field_reassign_with_default)]
-pub fn test_config(downstream: &str) -> Config {
-    let mut cfg = Config::default();
-    cfg.database_url = format!(
+/// The database for one test. `GATEWAY_TEST_BACKEND=postgres` uses a fresh schema in
+/// the Postgres at `GATEWAY_TEST_PG_URL`. Any other value uses a temp SQLite file.
+pub fn test_database_url() -> String {
+    if std::env::var("GATEWAY_TEST_BACKEND").as_deref() == Ok("postgres") {
+        let base = std::env::var("GATEWAY_TEST_PG_URL")
+            .expect("GATEWAY_TEST_PG_URL must be set when GATEWAY_TEST_BACKEND=postgres");
+        let schema = format!("gw_{}", uuid::Uuid::new_v4().simple());
+        let admin_url = base.clone();
+        let schema_for_thread = schema.clone();
+        // test_config is not async, so a short-lived runtime on its own thread creates the schema.
+        std::thread::spawn(move || {
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
+            rt.block_on(async {
+                let pool = sqlx::postgres::PgPoolOptions::new()
+                    .max_connections(1)
+                    .connect(&admin_url)
+                    .await
+                    .unwrap();
+                // The schema name comes from a UUID made here, never from input.
+                sqlx::query(sqlx::AssertSqlSafe(format!(
+                    "CREATE SCHEMA {schema_for_thread}"
+                )))
+                .execute(&pool)
+                .await
+                .unwrap();
+            });
+        })
+        .join()
+        .unwrap();
+        let sep = if base.contains('?') { '&' } else { '?' };
+        return format!("{base}{sep}options=-c%20search_path%3D{schema}");
+    }
+    format!(
         "sqlite://{}",
         std::env::temp_dir()
             .join(format!("wcg-it-{}.db", uuid::Uuid::new_v4()))
             .display()
-    );
+    )
+}
+
+#[allow(clippy::field_reassign_with_default)]
+pub fn test_config(downstream: &str) -> Config {
+    let mut cfg = Config::default();
+    cfg.database_url = test_database_url();
     cfg.server.admin_token = ADMIN.into();
     cfg.server.max_body_bytes = 4096;
     cfg.queue.workers = 2;
