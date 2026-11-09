@@ -1,0 +1,12 @@
+# Evidence: compose files pass podman compose config and docker compose config
+label: VERIFIED LOCALLY
+date: 2026-11-09 10:29 UTC
+code commit: d3bdf0007ad0bb0ddc630681d3df11124629332f
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: for each file set below: podman compose <files> --profile '*' config >/dev/null && docker compose <files> --profile '*' config -q
+notes: Config validation only. It does not start the stack. The docker compose plugin is Docker Compose 5.6.0 from the Fedora 44 package docker-compose-5.6.0-1.fc44 (RPM signature checked). It was extracted to a private DOCKER_CONFIG cli-plugins folder and not installed system-wide, so podman compose keeps using podman-compose. No Docker daemon is needed for config.
+---
+docker compose version: Docker Compose version 5.6.0
+podman-compose version: podman-compose version 1.6.0
+-f docker-compose.yml: podman compose config exit=0, docker compose config exit=0

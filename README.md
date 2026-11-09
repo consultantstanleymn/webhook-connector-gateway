@@ -1,6 +1,6 @@
 # Webhook and Connector Gateway
 
-A gateway that customer systems send events through. It checks each webhook, saves it, and delivers it to a downstream REST endpoint with retries. It is written in Rust (axum, tokio, sqlx, SQLite).
+A gateway that customer systems send events through. It checks each webhook, saves it, and delivers it to a downstream REST endpoint with retries. It is written in Rust (axum, tokio, sqlx). The store is SQLite or Postgres.
 
 It answers one question from a customer: "If I send you an event, will it arrive, and how will I know?"
 
@@ -32,6 +32,7 @@ All rows ran on one laptop (measured on one laptop). The load tool and the servi
 | Security scans: gitleaks, trivy (source), cargo audit | see `docs/engagement/SECURITY-GATE.md` | `docs/engagement/evidence/security-gate-local.txt` | 2026-11-09 |
 | k6 and Rust load tool against ingest (measured on one laptop) | `scripts/k6-ingest.sh` | `docs/engagement/evidence/k6-ingest.txt` | 2026-11-09 |
 | OTel spans `ingest`, `claim`, `deliver` in one Jaeger trace | `scripts/trace-run.sh` | `docs/engagement/evidence/jaeger-delivery-trace.json` | 2026-11-09 |
+| Compose file passes `podman compose config` and `docker compose config` | see the file | `docs/engagement/evidence/compose-config.txt` | 2026-11-09 |
 | Podman image build, Trivy scan, SBOM | `podman build` and `trivy image` | `docs/engagement/evidence/image-build.txt` | 2026-11-09 |
 
 Test counts from a real run (`scripts/test-both-backends.sh`, Postgres leg): 88 on each backend: 51 unit, 2 mock downstream, 20 integration, 3 migration, 5 Postgres store, 7 secrets.
@@ -43,7 +44,6 @@ Test counts from a real run (`scripts/test-both-backends.sh`, Postgres leg): 88 
 | `.github/workflows/ci.yml` (backend matrix with a Postgres service) | Run the suite on both backends on GitHub | Authored, not run: this file is written and syntax-checked with `actionlint 1.7.12`. It was not executed against GitHub Actions. Reason: needs GitHub Actions. |
 | `.github/workflows/security.yml` (CodeQL for Rust and four more jobs) | Run the security gate on GitHub | Authored, not run: this file is written and syntax-checked with `actionlint 1.7.12`. It was not executed against GitHub Actions. Reason: needs GitHub Actions. |
 | Cloud key service secret provider | Fetch the sealing key from a managed key service | Not built. Only the env and file providers exist. |
-| `docker compose` check of `docker-compose.yml` | Validate with the Docker plugin | The Docker compose plugin is not installed here. Only `podman compose config` ran. |
 
 ## Architecture
 
@@ -120,13 +120,13 @@ cargo clippy --all-targets -- -D warnings
 cargo test
 ```
 
-Results at the last run: fmt clean, clippy with `-D warnings` clean, 53 tests passed (37 unit and property tests, 16 integration tests), 0 failed. `cargo audit` and `cargo deny` are not installed on the build machine, so they were not run. CI runs `rustsec/audit-check`. The Docker image and compose file were written but not built, because Docker is not installed on the build machine. No `unsafe` code.
+Results at the last run: fmt clean, clippy with `-D warnings` clean, 88 tests passed on each backend (51 unit and property, 2 mock downstream, 20 integration, 3 migration, 5 Postgres store, 7 secrets), 0 failed. See `docs/engagement/evidence/dual-backend-tests.txt`. `cargo audit` ran with one dated exception (see `docs/engagement/evidence/security-gate-local.txt`). `cargo deny` is not installed, so it did not run. The image was built with podman and scanned with Trivy (`docs/engagement/evidence/image-build.txt`). The compose file passes `podman compose config` and `docker compose config` (`docs/engagement/evidence/compose-config.txt`). The stack was not started with Docker. No `unsafe` code.
 
 Integration tests start the real router on a random port with a temp SQLite file and a hand-made downstream, and cover: signing, replay window, idempotency, rate limit, size limit, retries, dead letter and replay, permanent 4xx, filtering, circuit breaker, rotation grace, admin auth, metrics, restart with queued events, and graceful shutdown with work in flight. Property tests (proptest) cover signatures (round trip, any body change, wrong secret, window edges, parser never panics) and backoff (bounds, monotonic ceiling, no overflow).
 
 ## Performance
 
-About 4,100 to 4,400 accepted events per second with p99 near 25 ms on a 2015 MacBook with the load tool on the same machine, and about 2,200 events/s delivery drain. Details, method, and limits: [docs/PERF.md](docs/PERF.md).
+About 4,100 to 4,400 accepted events per second with p99 near 25 ms, and about 2,200 events/s delivery drain (measured on one laptop, a 2015 MacBook, with the load tool on the same machine). Details, method, and limits: [docs/PERF.md](docs/PERF.md).
 
 ## Docker
 
