@@ -1,0 +1,14 @@
+# Evidence: promtool tests of the delivery SLO rules
+label: VERIFIED LOCALLY
+date: 2026-11-09 08:49 UTC
+code commit: 989d8e65fa8b417f691114cd51fe81eafe686248
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: podman run --rm -v "$PWD/deploy/rules:/r:ro,z" --entrypoint promtool docker.io/prom/prometheus:v2.55.1 test rules /r/slo.rules.test.yml
+notes: promtool really ran on synthetic series: six cases (fire, quiet, downstream down for each of two alerts). Not live traffic.
+---
+Checking /r/slo.rules.yml
+  SUCCESS: 6 rules found
+
+  SUCCESS
+
