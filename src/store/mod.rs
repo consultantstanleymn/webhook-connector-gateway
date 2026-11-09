@@ -265,6 +265,30 @@ impl Store {
         }
     }
 
+    /// Every tenant with its stored (sealed) secrets: id, secret, previous secret.
+    pub async fn list_tenant_secrets(
+        &self,
+    ) -> Result<Vec<(String, String, Option<String>)>, sqlx::Error> {
+        match self {
+            Store::Sqlite(s) => s.list_tenant_secrets().await,
+            Store::Postgres(s) => s.list_tenant_secrets().await,
+        }
+    }
+
+    /// Replace the stored secrets of a tenant, only if they still hold the values
+    /// that were read. False when another change came first.
+    pub async fn replace_tenant_secrets(
+        &self,
+        id: &str,
+        old: (&str, Option<&str>),
+        new: (&str, Option<&str>),
+    ) -> Result<bool, sqlx::Error> {
+        match self {
+            Store::Sqlite(s) => s.replace_tenant_secrets(id, old, new).await,
+            Store::Postgres(s) => s.replace_tenant_secrets(id, old, new).await,
+        }
+    }
+
     pub async fn depth(&self) -> Result<Vec<(String, i64)>, sqlx::Error> {
         match self {
             Store::Sqlite(s) => s.depth().await,

@@ -104,10 +104,12 @@ pub fn test_key_dir() -> String {
     use base64::Engine as _;
     let dir = std::env::temp_dir().join("wcg-test-keys");
     std::fs::create_dir_all(&dir).unwrap();
-    let file = dir.join("primary");
-    if !file.exists() {
-        let key = base64::engine::general_purpose::STANDARD.encode([42u8; 32]);
-        std::fs::write(&file, key).unwrap();
+    for (name, byte) in [("primary", 42u8), ("second", 43u8)] {
+        let file = dir.join(name);
+        if !file.exists() {
+            let key = base64::engine::general_purpose::STANDARD.encode([byte; 32]);
+            std::fs::write(&file, key).unwrap();
+        }
     }
     dir.display().to_string()
 }

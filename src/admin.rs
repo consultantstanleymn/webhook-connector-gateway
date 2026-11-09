@@ -77,6 +77,62 @@ pub async fn rotate_secret(
     }
 }
 
+/// Counts from a reseal run.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Resealed {
+    pub resealed: u64,
+    pub unchanged: u64,
+}
+
+/// Seal every stored secret with the key `to_kid`. A value that already uses that key
+/// stays as it is, so a second run changes nothing. Each tenant is one atomic update,
+/// and it applies only if no rotation changed the row in the meantime.
+pub async fn reseal_secrets(
+    store: &Store,
+    keyring: &crate::secrets::Keyring,
+    to_kid: &str,
+) -> anyhow::Result<Resealed> {
+    let mut out = Resealed {
+        resealed: 0,
+        unchanged: 0,
+    };
+    for (id, secret, prev) in store.list_tenant_secrets().await? {
+        let new_secret = reseal_one(keyring, to_kid, &secret)?;
+        let new_prev = match &prev {
+            Some(p) => Some(reseal_one(keyring, to_kid, p)?),
+            None => None,
+        };
+        if new_secret == secret && new_prev == prev {
+            out.unchanged += 1;
+            continue;
+        }
+        if store
+            .replace_tenant_secrets(
+                &id,
+                (&secret, prev.as_deref()),
+                (&new_secret, new_prev.as_deref()),
+            )
+            .await?
+        {
+            out.resealed += 1;
+        } else {
+            anyhow::bail!("tenant {id} changed during the reseal; run the command again");
+        }
+    }
+    Ok(out)
+}
+
+fn reseal_one(
+    keyring: &crate::secrets::Keyring,
+    to_kid: &str,
+    stored: &str,
+) -> anyhow::Result<String> {
+    if crate::secrets::Keyring::kid_of(stored) == Some(to_kid) {
+        return Ok(stored.to_string());
+    }
+    keyring.seal_to(to_kid, &keyring.open(stored)?)
+}
+
 /// Bearer token check for `/admin`.
 pub async fn require_admin(
     State(st): State<AppState>,

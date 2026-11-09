@@ -61,6 +61,11 @@ enum Cmd {
         #[arg(long)]
         grace_secs: Option<i64>,
     },
+    /// Seal every stored signing secret with the key id `--to`. Use it after a key change.
+    ResealSecrets {
+        #[arg(long)]
+        to: String,
+    },
     /// Print a signature header for a body. Useful for tests and onboarding.
     Sign {
         #[arg(long, env = "WEBHOOK_SECRET", hide_env_values = true)]
@@ -225,6 +230,15 @@ async fn admin_command(cmd: Cmd, cfg: Config) -> anyhow::Result<()> {
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
             println!(
                 "new secret for {tenant}: {secret}\nold secret stays valid for {grace} seconds"
+            );
+        }
+        Cmd::ResealSecrets { to } => {
+            let keyring = webhook_connector_gateway::secrets::Keyring::load(&cfg.secrets)
+                .context("the signing-secret keys are not available")?;
+            let r = admin::reseal_secrets(&store, &keyring, &to).await?;
+            println!(
+                "resealed {} tenants, {} already used {to}",
+                r.resealed, r.unchanged
             );
         }
         Cmd::Serve | Cmd::Sign { .. } => unreachable!("handled in main"),

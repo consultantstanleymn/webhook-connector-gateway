@@ -89,6 +89,17 @@ Use it on a schedule, or at once after a leak.
 
 Downstream calls are signed with the tenant secret too. If the customer's downstream checks that signature, it must change to the new secret as well.
 
+### 3b. Key rotation for secrets at rest (a different job)
+
+Signing-secret rotation above changes the secret that a customer uses. Key rotation changes the key that encrypts the stored secrets. The customer sees nothing.
+
+1. Make a new 32-byte key as base64 and give it to the provider under a new key id, for example `GATEWAY_SECRET_SECOND` (env) or the file `<dir>/second`.
+2. In the config, set `active_kid = "second"` and `previous_kids = ["primary"]`. Restart the gateway. New values use `second`. Old values still open with `primary`.
+3. Run `gateway reseal-secrets --to second`. It prints how many tenants it changed. A second run changes none.
+4. After every row uses `second`, remove `primary` from `previous_kids` and from the provider.
+
+If the command says a tenant changed during the reseal, run it again.
+
 ## 4. Rejected traffic
 
 `gateway_requests_rejected_total{reason=...}` shows why requests are refused.

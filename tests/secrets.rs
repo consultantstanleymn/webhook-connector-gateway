@@ -2,7 +2,22 @@
 
 mod common;
 use common::*;
-use webhook_connector_gateway::{app::Runtime, secrets::Keyring};
+use webhook_connector_gateway::{
+    admin::reseal_secrets,
+    app::Runtime,
+    secrets::{Keyring, SecretsCfg},
+};
+
+/// A keyring that seals with `second` and can still open `primary`.
+fn ring_second_active() -> Keyring {
+    Keyring::load(&SecretsCfg {
+        provider: "file".into(),
+        dir: Some(test_key_dir()),
+        active_kid: "second".into(),
+        previous_kids: vec!["primary".into()],
+    })
+    .unwrap()
+}
 
 #[tokio::test]
 async fn db_rows_hold_no_plain_secret() {
@@ -61,4 +76,79 @@ fn keyring_loads_from_the_test_directory() {
         ..Default::default()
     };
     assert_eq!(Keyring::load(&cfg).unwrap().active_kid(), "primary");
+}
+
+#[tokio::test]
+async fn reseal_moves_all_rows_to_new_kid() {
+    let h = Harness::start().await;
+    let ring = ring_second_active();
+    let before =
+        h.rt.state
+            .store
+            .tenant_by_id(TENANT)
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(Keyring::kid_of(&before.secret), Some("primary"));
+    let r = reseal_secrets(&h.rt.state.store, &ring, "second")
+        .await
+        .unwrap();
+    assert_eq!(r.resealed, 1);
+    let after =
+        h.rt.state
+            .store
+            .tenant_by_id(TENANT)
+            .await
+            .unwrap()
+            .unwrap();
+    assert_eq!(Keyring::kid_of(&after.secret), Some("second"));
+    assert_eq!(after.current_secret(&ring).unwrap(), SECRET);
+}
+
+#[tokio::test]
+async fn old_kid_still_opens_during_overlap() {
+    let h = Harness::start().await;
+    let row =
+        h.rt.state
+            .store
+            .tenant_by_id(TENANT)
+            .await
+            .unwrap()
+            .unwrap();
+    // The row is still sealed with `primary`. The new keyring opens it as a previous key.
+    assert_eq!(Keyring::kid_of(&row.secret), Some("primary"));
+    assert_eq!(row.current_secret(&ring_second_active()).unwrap(), SECRET);
+}
+
+#[tokio::test]
+async fn reseal_twice_is_noop() {
+    let h = Harness::start().await;
+    let ring = ring_second_active();
+    let first = reseal_secrets(&h.rt.state.store, &ring, "second")
+        .await
+        .unwrap();
+    let sealed =
+        h.rt.state
+            .store
+            .tenant_by_id(TENANT)
+            .await
+            .unwrap()
+            .unwrap()
+            .secret;
+    let again = reseal_secrets(&h.rt.state.store, &ring, "second")
+        .await
+        .unwrap();
+    assert_eq!((first.resealed, again.resealed, again.unchanged), (1, 0, 1));
+    let same =
+        h.rt.state
+            .store
+            .tenant_by_id(TENANT)
+            .await
+            .unwrap()
+            .unwrap()
+            .secret;
+    assert_eq!(
+        sealed, same,
+        "a second run must not change the stored value"
+    );
 }

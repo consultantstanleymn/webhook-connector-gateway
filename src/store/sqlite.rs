@@ -379,6 +379,34 @@ impl SqliteStore {
     }
 
     /// Event counts by status, for the queue depth gauge.
+    pub async fn list_tenant_secrets(
+        &self,
+    ) -> Result<Vec<(String, String, Option<String>)>, sqlx::Error> {
+        sqlx::query_as("SELECT id, secret, prev_secret FROM tenants ORDER BY id")
+            .fetch_all(&self.pool)
+            .await
+    }
+
+    pub async fn replace_tenant_secrets(
+        &self,
+        id: &str,
+        old: (&str, Option<&str>),
+        new: (&str, Option<&str>),
+    ) -> Result<bool, sqlx::Error> {
+        let r = sqlx::query(
+            "UPDATE tenants SET secret = ?, prev_secret = ?
+             WHERE id = ? AND secret = ? AND prev_secret IS ?",
+        )
+        .bind(new.0)
+        .bind(new.1)
+        .bind(id)
+        .bind(old.0)
+        .bind(old.1)
+        .execute(&self.pool)
+        .await?;
+        Ok(r.rows_affected() == 1)
+    }
+
     pub async fn depth(&self) -> Result<Vec<(String, i64)>, sqlx::Error> {
         sqlx::query_as("SELECT status, COUNT(*) FROM events GROUP BY status")
             .fetch_all(&self.pool)

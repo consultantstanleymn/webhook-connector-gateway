@@ -123,7 +123,7 @@ deploy/         compose config, Prometheus config
 
 ## Known limits
 
-SQLite only (Postgres is a design goal, not built). Signing secrets are stored in clear. Rate limit and breaker state are per instance. Delivery is at-least-once with no ordering. Full list in [LEARN.md](LEARN.md).
+SQLite and Postgres stores exist. The signing-secret key comes from an environment variable or a file. A cloud key service adapter is not built. Rate limit and breaker state are per instance. Delivery is at-least-once with no ordering. Full list in [LEARN.md](LEARN.md).
 
 ## License
 

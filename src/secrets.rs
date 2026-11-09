@@ -147,6 +147,14 @@ impl Keyring {
         self.seal_with(&self.active.0, &self.active.1, plain)
     }
 
+    /// Seal with a named key. The key must be the active one or a previous one.
+    pub fn seal_to(&self, kid: &str, plain: &str) -> anyhow::Result<String> {
+        let key = self
+            .key_for(kid)
+            .ok_or_else(|| anyhow!("unknown key id {kid:?}"))?;
+        Ok(self.seal_with(kid, key, plain))
+    }
+
     fn seal_with(&self, kid: &str, key: &Key<Aes256Gcm>, plain: &str) -> String {
         let nonce_bytes: [u8; 12] = rand::rng().random();
         let ct = Aes256Gcm::new(key)
