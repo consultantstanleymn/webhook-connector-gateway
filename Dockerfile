@@ -5,6 +5,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends cmake build-ess
 WORKDIR /src
 COPY Cargo.toml Cargo.lock ./
 COPY src ./src
+COPY migrations ./migrations
 RUN cargo build --release --locked --bin gateway --bin mock-downstream
 
 # Runtime stage: no shell tools beyond the base, non-root user
