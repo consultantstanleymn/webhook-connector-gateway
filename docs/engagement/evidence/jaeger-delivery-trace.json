@@ -1,0 +1,800 @@
+{
+  "data": [
+    {
+      "traceID": "340b765ae69602b56aa9e3fe81d635f1",
+      "spans": [
+        {
+          "traceID": "340b765ae69602b56aa9e3fe81d635f1",
+          "spanID": "6c95c9fa6f293d9c",
+          "operationName": "event",
+          "references": [],
+          "startTime": 1794217256367186,
+          "duration": 2832,
+          "tags": [
+            {
+              "key": "attempt",
+              "type": "int64",
+              "value": 1
+            },
+            {
+              "key": "busy_ns",
+              "type": "int64",
+              "value": 1949184
+            },
+            {
+              "key": "code.file.path",
+              "type": "string",
+              "value": "src/worker.rs"
+            },
+            {
+              "key": "code.line.number",
+              "type": "int64",
+              "value": 97
+            },
+            {
+              "key": "code.module.name",
+              "type": "string",
+              "value": "webhook_connector_gateway::worker"
+            },
+            {
+              "key": "event_id",
+              "type": "string",
+              "value": "b84f0bc0-6cc0-4a3b-9146-8cdeeb21b11e"
+            },
+            {
+              "key": "idle_ns",
+              "type": "int64",
+              "value": 886673
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "webhook-connector-gateway"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "target",
+              "type": "string",
+              "value": "webhook_connector_gateway::worker"
+            },
+            {
+              "key": "tenant",
+              "type": "string",
+              "value": "trace"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 5
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "tokio-rt-worker"
+            },
+            {
+              "key": "trace_id",
+              "type": "string",
+              "value": "0369309da99990fd6f702215b88ac8b3"
+            }
+          ],
+          "logs": [
+            {
+              "timestamp": 1794217256369981,
+              "fields": [
+                {
+                  "key": "event",
+                  "type": "string",
+                  "value": "event delivered"
+                },
+                {
+                  "key": "code.file.path",
+                  "type": "string",
+                  "value": "src/worker.rs"
+                },
+                {
+                  "key": "code.line.number",
+                  "type": "int64",
+                  "value": 210
+                },
+                {
+                  "key": "code.module.name",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::worker"
+                },
+                {
+                  "key": "level",
+                  "type": "string",
+                  "value": "INFO"
+                },
+                {
+                  "key": "target",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::worker"
+                }
+              ]
+            }
+          ],
+          "processID": "p1",
+          "warnings": null
+        }
+      ],
+      "processes": {
+        "p1": {
+          "serviceName": "webhook-connector-gateway",
+          "tags": [
+            {
+              "key": "telemetry.sdk.language",
+              "type": "string",
+              "value": "rust"
+            },
+            {
+              "key": "telemetry.sdk.name",
+              "type": "string",
+              "value": "opentelemetry"
+            },
+            {
+              "key": "telemetry.sdk.version",
+              "type": "string",
+              "value": "0.33.1"
+            }
+          ]
+        }
+      },
+      "warnings": null
+    },
+    {
+      "traceID": "0242d681ccd8d8e0fd7d40c2d4912e31",
+      "spans": [
+        {
+          "traceID": "0242d681ccd8d8e0fd7d40c2d4912e31",
+          "spanID": "738f612ecc8ab30f",
+          "operationName": "http",
+          "references": [],
+          "startTime": 1794217256350590,
+          "duration": 1010,
+          "tags": [
+            {
+              "key": "busy_ns",
+              "type": "int64",
+              "value": 746908
+            },
+            {
+              "key": "code.file.path",
+              "type": "string",
+              "value": "src/observability.rs"
+            },
+            {
+              "key": "code.line.number",
+              "type": "int64",
+              "value": 105
+            },
+            {
+              "key": "code.module.name",
+              "type": "string",
+              "value": "webhook_connector_gateway::observability"
+            },
+            {
+              "key": "idle_ns",
+              "type": "int64",
+              "value": 274885
+            },
+            {
+              "key": "method",
+              "type": "string",
+              "value": "GET"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "webhook-connector-gateway"
+            },
+            {
+              "key": "request_id",
+              "type": "string",
+              "value": "93352ae2-f330-4858-80ec-cb12aa54b9d1"
+            },
+            {
+              "key": "route",
+              "type": "string",
+              "value": "/readyz"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "target",
+              "type": "string",
+              "value": "webhook_connector_gateway::observability"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 9
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "tokio-rt-worker"
+            }
+          ],
+          "logs": [
+            {
+              "timestamp": 1794217256351593,
+              "fields": [
+                {
+                  "key": "event",
+                  "type": "string",
+                  "value": "request done"
+                },
+                {
+                  "key": "code.file.path",
+                  "type": "string",
+                  "value": "src/observability.rs"
+                },
+                {
+                  "key": "code.line.number",
+                  "type": "int64",
+                  "value": 115
+                },
+                {
+                  "key": "code.module.name",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::observability"
+                },
+                {
+                  "key": "latency_ms",
+                  "type": "float64",
+                  "value": 0.781401
+                },
+                {
+                  "key": "level",
+                  "type": "string",
+                  "value": "INFO"
+                },
+                {
+                  "key": "status",
+                  "type": "string",
+                  "value": "200"
+                },
+                {
+                  "key": "target",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::observability"
+                }
+              ]
+            }
+          ],
+          "processID": "p1",
+          "warnings": null
+        }
+      ],
+      "processes": {
+        "p1": {
+          "serviceName": "webhook-connector-gateway",
+          "tags": [
+            {
+              "key": "telemetry.sdk.language",
+              "type": "string",
+              "value": "rust"
+            },
+            {
+              "key": "telemetry.sdk.name",
+              "type": "string",
+              "value": "opentelemetry"
+            },
+            {
+              "key": "telemetry.sdk.version",
+              "type": "string",
+              "value": "0.33.1"
+            }
+          ]
+        }
+      },
+      "warnings": null
+    },
+    {
+      "traceID": "0369309da99990fd6f702215b88ac8b3",
+      "spans": [
+        {
+          "traceID": "0369309da99990fd6f702215b88ac8b3",
+          "spanID": "9df728f45fe59d1d",
+          "operationName": "ingest",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "0369309da99990fd6f702215b88ac8b3",
+              "spanID": "c423368baf585593"
+            }
+          ],
+          "startTime": 1794217256365407,
+          "duration": 703,
+          "tags": [
+            {
+              "key": "busy_ns",
+              "type": "int64",
+              "value": 512569
+            },
+            {
+              "key": "code.file.path",
+              "type": "string",
+              "value": "src/ingest.rs"
+            },
+            {
+              "key": "code.line.number",
+              "type": "int64",
+              "value": 122
+            },
+            {
+              "key": "code.module.name",
+              "type": "string",
+              "value": "webhook_connector_gateway::ingest"
+            },
+            {
+              "key": "event.id",
+              "type": "string",
+              "value": "b84f0bc0-6cc0-4a3b-9146-8cdeeb21b11e"
+            },
+            {
+              "key": "idle_ns",
+              "type": "int64",
+              "value": 193322
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "webhook-connector-gateway"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "target",
+              "type": "string",
+              "value": "webhook_connector_gateway::ingest"
+            },
+            {
+              "key": "tenant.id",
+              "type": "string",
+              "value": "trace"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 4
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "tokio-rt-worker"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": [
+            "invalid parent span IDs=c423368baf585593; skipping clock skew adjustment"
+          ]
+        },
+        {
+          "traceID": "0369309da99990fd6f702215b88ac8b3",
+          "spanID": "cbc03f77a858b46c",
+          "operationName": "claim",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "0369309da99990fd6f702215b88ac8b3",
+              "spanID": "bd9f344c9bd4ee11"
+            }
+          ],
+          "startTime": 1794217256367035,
+          "duration": 78,
+          "tags": [
+            {
+              "key": "attempt",
+              "type": "int64",
+              "value": 1
+            },
+            {
+              "key": "busy_ns",
+              "type": "int64",
+              "value": 8313
+            },
+            {
+              "key": "claim.duration_ms",
+              "type": "string",
+              "value": "0"
+            },
+            {
+              "key": "code.file.path",
+              "type": "string",
+              "value": "src/worker.rs"
+            },
+            {
+              "key": "code.line.number",
+              "type": "int64",
+              "value": 92
+            },
+            {
+              "key": "code.module.name",
+              "type": "string",
+              "value": "webhook_connector_gateway::worker"
+            },
+            {
+              "key": "event.id",
+              "type": "string",
+              "value": "b84f0bc0-6cc0-4a3b-9146-8cdeeb21b11e"
+            },
+            {
+              "key": "idle_ns",
+              "type": "int64",
+              "value": 76765
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "webhook-connector-gateway"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "target",
+              "type": "string",
+              "value": "webhook_connector_gateway::worker"
+            },
+            {
+              "key": "tenant.id",
+              "type": "string",
+              "value": "trace"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 5
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "tokio-rt-worker"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": [
+            "invalid parent span IDs=bd9f344c9bd4ee11; skipping clock skew adjustment"
+          ]
+        },
+        {
+          "traceID": "0369309da99990fd6f702215b88ac8b3",
+          "spanID": "66954e81f8d8b5bd",
+          "operationName": "deliver",
+          "references": [
+            {
+              "refType": "CHILD_OF",
+              "traceID": "0369309da99990fd6f702215b88ac8b3",
+              "spanID": "86ae074ef3c1edbf"
+            }
+          ],
+          "startTime": 1794217256367771,
+          "duration": 1515,
+          "tags": [
+            {
+              "key": "attempt",
+              "type": "int64",
+              "value": 1
+            },
+            {
+              "key": "busy_ns",
+              "type": "int64",
+              "value": 720200
+            },
+            {
+              "key": "code.file.path",
+              "type": "string",
+              "value": "src/worker.rs"
+            },
+            {
+              "key": "code.line.number",
+              "type": "int64",
+              "value": 178
+            },
+            {
+              "key": "code.module.name",
+              "type": "string",
+              "value": "webhook_connector_gateway::worker"
+            },
+            {
+              "key": "event.id",
+              "type": "string",
+              "value": "b84f0bc0-6cc0-4a3b-9146-8cdeeb21b11e"
+            },
+            {
+              "key": "idle_ns",
+              "type": "int64",
+              "value": 798364
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "webhook-connector-gateway"
+            },
+            {
+              "key": "outcome",
+              "type": "string",
+              "value": "success"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "target",
+              "type": "string",
+              "value": "webhook_connector_gateway::worker"
+            },
+            {
+              "key": "tenant.id",
+              "type": "string",
+              "value": "trace"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 5
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "tokio-rt-worker"
+            }
+          ],
+          "logs": [],
+          "processID": "p1",
+          "warnings": [
+            "invalid parent span IDs=86ae074ef3c1edbf; skipping clock skew adjustment"
+          ]
+        }
+      ],
+      "processes": {
+        "p1": {
+          "serviceName": "webhook-connector-gateway",
+          "tags": [
+            {
+              "key": "telemetry.sdk.language",
+              "type": "string",
+              "value": "rust"
+            },
+            {
+              "key": "telemetry.sdk.name",
+              "type": "string",
+              "value": "opentelemetry"
+            },
+            {
+              "key": "telemetry.sdk.version",
+              "type": "string",
+              "value": "0.33.1"
+            }
+          ]
+        }
+      },
+      "warnings": null
+    },
+    {
+      "traceID": "3cc0b207ac7fc91fb46b4a06955222f6",
+      "spans": [
+        {
+          "traceID": "3cc0b207ac7fc91fb46b4a06955222f6",
+          "spanID": "85d6dfb9537516a5",
+          "operationName": "http",
+          "references": [],
+          "startTime": 1794217256364000,
+          "duration": 2490,
+          "tags": [
+            {
+              "key": "busy_ns",
+              "type": "int64",
+              "value": 1714902
+            },
+            {
+              "key": "code.file.path",
+              "type": "string",
+              "value": "src/observability.rs"
+            },
+            {
+              "key": "code.line.number",
+              "type": "int64",
+              "value": 105
+            },
+            {
+              "key": "code.module.name",
+              "type": "string",
+              "value": "webhook_connector_gateway::observability"
+            },
+            {
+              "key": "idle_ns",
+              "type": "int64",
+              "value": 782999
+            },
+            {
+              "key": "method",
+              "type": "string",
+              "value": "POST"
+            },
+            {
+              "key": "otel.scope.name",
+              "type": "string",
+              "value": "webhook-connector-gateway"
+            },
+            {
+              "key": "request_id",
+              "type": "string",
+              "value": "9c357f94-b49a-42d1-8487-b1ad12f88263"
+            },
+            {
+              "key": "route",
+              "type": "string",
+              "value": "/v1/webhooks"
+            },
+            {
+              "key": "span.kind",
+              "type": "string",
+              "value": "internal"
+            },
+            {
+              "key": "target",
+              "type": "string",
+              "value": "webhook_connector_gateway::observability"
+            },
+            {
+              "key": "thread.id",
+              "type": "int64",
+              "value": 4
+            },
+            {
+              "key": "thread.name",
+              "type": "string",
+              "value": "tokio-rt-worker"
+            }
+          ],
+          "logs": [
+            {
+              "timestamp": 1794217256366309,
+              "fields": [
+                {
+                  "key": "event",
+                  "type": "string",
+                  "value": "event accepted"
+                },
+                {
+                  "key": "code.file.path",
+                  "type": "string",
+                  "value": "src/ingest.rs"
+                },
+                {
+                  "key": "code.line.number",
+                  "type": "int64",
+                  "value": 143
+                },
+                {
+                  "key": "code.module.name",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::ingest"
+                },
+                {
+                  "key": "event_id",
+                  "type": "string",
+                  "value": "b84f0bc0-6cc0-4a3b-9146-8cdeeb21b11e"
+                },
+                {
+                  "key": "level",
+                  "type": "string",
+                  "value": "INFO"
+                },
+                {
+                  "key": "target",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::ingest"
+                },
+                {
+                  "key": "tenant",
+                  "type": "string",
+                  "value": "trace"
+                },
+                {
+                  "key": "trace_id",
+                  "type": "string",
+                  "value": "0369309da99990fd6f702215b88ac8b3"
+                }
+              ]
+            },
+            {
+              "timestamp": 1794217256366486,
+              "fields": [
+                {
+                  "key": "event",
+                  "type": "string",
+                  "value": "request done"
+                },
+                {
+                  "key": "code.file.path",
+                  "type": "string",
+                  "value": "src/observability.rs"
+                },
+                {
+                  "key": "code.line.number",
+                  "type": "int64",
+                  "value": 115
+                },
+                {
+                  "key": "code.module.name",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::observability"
+                },
+                {
+                  "key": "latency_ms",
+                  "type": "float64",
+                  "value": 2.3523490000000002
+                },
+                {
+                  "key": "level",
+                  "type": "string",
+                  "value": "INFO"
+                },
+                {
+                  "key": "status",
+                  "type": "string",
+                  "value": "202"
+                },
+                {
+                  "key": "target",
+                  "type": "string",
+                  "value": "webhook_connector_gateway::observability"
+                }
+              ]
+            }
+          ],
+          "processID": "p1",
+          "warnings": null
+        }
+      ],
+      "processes": {
+        "p1": {
+          "serviceName": "webhook-connector-gateway",
+          "tags": [
+            {
+              "key": "telemetry.sdk.language",
+              "type": "string",
+              "value": "rust"
+            },
+            {
+              "key": "telemetry.sdk.name",
+              "type": "string",
+              "value": "opentelemetry"
+            },
+            {
+              "key": "telemetry.sdk.version",
+              "type": "string",
+              "value": "0.33.1"
+            }
+          ]
+        }
+      },
+      "warnings": null
+    }
+  ],
+  "total": 0,
+  "limit": 0,
+  "offset": 0,
+  "errors": null
+}

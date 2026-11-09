@@ -1,0 +1,15 @@
+# Evidence: One delivered event as a Jaeger trace
+label: VERIFIED LOCALLY
+date: 2026-11-09 09:41 UTC
+code commit: 52add4f5847529e2f538d650c750432026a2404e
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: flock heavy.lock nice -n 10 scripts/trace-run.sh /tmp/trace.json (Jaeger all-in-one 1.66.0 in a local container; the JSON is jaeger-delivery-trace.json)
+notes: The trace 0369309da99990fd6f702215b88ac8b3 holds three spans: ingest, claim, deliver. The other traces are the http request spans and the older event span, which are separate roots. Debug build, one laptop.
+---
+post status: 202
+mock stats: {"calls":1,"duplicates":0,"ok":1,"received":1,"unique":1}
+span names in the trace: claim, deliver, event, http, ingest
+trace count: 4
+spans in the largest trace: 3
+exit=0
