@@ -3,6 +3,7 @@
 # It starts a mock downstream and the gateway on random free ports,
 # walks through the main features, and stops everything (by PID).
 set -u
+export GATEWAY_SECRET_PRIMARY="${GATEWAY_SECRET_PRIMARY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}"  # demo key for local runs, not a secret
 BIN=${BIN:-target/release}
 WORK=$(mktemp -d)
 free_port() { python3 -c 'import socket;s=socket.socket();s.bind(("127.0.0.1",0));print(s.getsockname()[1]);s.close()'; }

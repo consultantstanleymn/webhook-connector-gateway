@@ -34,13 +34,17 @@ pub struct NewTenantCreds {
 
 /// Create the tenants from the config that do not exist yet.
 /// Existing tenants are not touched, so a rotated secret survives restarts.
-pub async fn seed_tenants(store: &Store, cfg: &Config) -> anyhow::Result<Vec<NewTenantCreds>> {
+pub async fn seed_tenants(
+    store: &Store,
+    cfg: &Config,
+    keyring: &crate::secrets::Keyring,
+) -> anyhow::Result<Vec<NewTenantCreds>> {
     let mut created = Vec::new();
     for t in &cfg.tenants {
         let api_key = t.api_key.clone().unwrap_or_else(|| random_token("gwk_"));
         let secret = t.secret.clone().unwrap_or_else(|| random_token("whsec_"));
         if store
-            .create_tenant_if_absent(&t.id, &hash_hex(api_key.as_bytes()), &secret)
+            .create_tenant_if_absent(&t.id, &hash_hex(api_key.as_bytes()), &keyring.seal(&secret))
             .await?
         {
             created.push(NewTenantCreds {
@@ -56,12 +60,16 @@ pub async fn seed_tenants(store: &Store, cfg: &Config) -> anyhow::Result<Vec<New
 /// Make a new secret. The old one works for `grace_secs` more seconds.
 pub async fn rotate_secret(
     store: &Store,
+    keyring: &crate::secrets::Keyring,
     tenant: &str,
     grace_secs: i64,
 ) -> Result<String, ApiError> {
     let new_secret = random_token("whsec_");
     let expires = now_ms() + grace_secs.max(0) * 1000;
-    if store.rotate_secret(tenant, &new_secret, expires).await? {
+    if store
+        .rotate_secret(tenant, &keyring.seal(&new_secret), expires)
+        .await?
+    {
         tracing::info!(tenant, grace_secs, "tenant secret rotated");
         Ok(new_secret)
     } else {
@@ -158,7 +166,7 @@ pub async fn rotate(
     Query(q): Query<RotateQuery>,
 ) -> Result<Json<Value>, ApiError> {
     let grace = q.grace_secs.unwrap_or(st.cfg.server.rotation_grace_secs);
-    let secret = rotate_secret(&st.store, &tenant, grace).await?;
+    let secret = rotate_secret(&st.store, &st.keyring, &tenant, grace).await?;
     Ok(Json(
         json!({ "tenant": tenant, "secret": secret, "old_secret_valid_for_secs": grace }),
     ))

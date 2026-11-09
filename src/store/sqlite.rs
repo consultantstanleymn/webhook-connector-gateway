@@ -473,7 +473,9 @@ mod tests {
         s.create_tenant_if_absent("t", "h", "old").await.unwrap();
         assert!(s.rotate_secret("t", "new", now_ms() + 1000).await.unwrap());
         let t = s.tenant_by_id("t").await.unwrap().unwrap();
-        assert_eq!(t.valid_secrets(now_ms()), vec!["new", "old"]);
-        assert_eq!(t.valid_secrets(now_ms() + 2000), vec!["new"]);
+        // The values here are legacy plain text, which the keyring passes through.
+        let ring = crate::secrets::Keyring::new(("k", &[7u8; 32]), &[]).unwrap();
+        assert_eq!(t.valid_secrets(now_ms(), &ring), vec!["new", "old"]);
+        assert_eq!(t.valid_secrets(now_ms() + 2000, &ring), vec!["new"]);
     }
 }

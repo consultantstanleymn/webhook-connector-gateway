@@ -136,6 +136,7 @@ pub struct Config {
     pub queue: QueueCfg,
     pub delivery: DeliveryCfg,
     pub tenants: Vec<TenantCfg>,
+    pub secrets: crate::secrets::SecretsCfg,
 }
 
 impl Default for Config {
@@ -146,6 +147,7 @@ impl Default for Config {
             queue: QueueCfg::default(),
             delivery: DeliveryCfg::default(),
             tenants: Vec::new(),
+            secrets: crate::secrets::SecretsCfg::default(),
         }
     }
 }

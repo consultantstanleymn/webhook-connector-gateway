@@ -24,15 +24,21 @@ pub struct TenantRow {
 
 impl TenantRow {
     /// Secrets that are valid at `now_ms`: the current one, and the previous
-    /// one while its grace window is open.
-    pub fn valid_secrets(&self, now_ms: i64) -> Vec<&str> {
-        let mut v = vec![self.secret.as_str()];
+    /// one while its grace window is open. The stored values are sealed, and
+    /// the keyring opens them. A value that cannot be opened is skipped.
+    pub fn valid_secrets(&self, now_ms: i64, keyring: &crate::secrets::Keyring) -> Vec<String> {
+        let mut v: Vec<String> = keyring.open(&self.secret).into_iter().collect();
         if let (Some(p), Some(exp)) = (&self.prev_secret, self.prev_expires_at) {
             if exp > now_ms {
-                v.push(p.as_str());
+                v.extend(keyring.open(p));
             }
         }
         v
+    }
+
+    /// The current secret in the clear, for signing the outbound call.
+    pub fn current_secret(&self, keyring: &crate::secrets::Keyring) -> anyhow::Result<String> {
+        keyring.open(&self.secret)
     }
 }
 

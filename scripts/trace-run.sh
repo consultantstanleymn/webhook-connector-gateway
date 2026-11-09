@@ -3,6 +3,7 @@
 # from a local Jaeger. Jaeger UI on 25686, OTLP gRPC on 25617, gateway on 25680, mock on 25690.
 # Usage (HEAVY, needs a Jaeger image): flock heavy.lock nice -n 10 scripts/trace-run.sh <out.json>
 set -u
+export GATEWAY_SECRET_PRIMARY="${GATEWAY_SECRET_PRIMARY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}"  # demo key for local runs, not a secret
 cd "$(dirname "$0")/.." || exit 1
 OUT="${1:-/tmp/rgw-trace.json}"
 T=/tmp/rgw-trace

@@ -4,6 +4,7 @@ use crate::{
     admin, config::Config, ingest, metrics::Metrics, observability, ratelimit::RateLimiter,
     store::Store,
 };
+use anyhow::Context;
 use axum::{
     Router,
     extract::{DefaultBodyLimit, State},
@@ -23,18 +24,26 @@ pub struct AppState {
     pub metrics: Metrics,
     /// Wakes idle workers when an event arrives.
     pub notify: Arc<Notify>,
+    pub keyring: Arc<crate::secrets::Keyring>,
     /// Cached count of pending and processing events: when it was read, and the count.
     pub pending_cache: Arc<std::sync::Mutex<(std::time::Instant, i64)>>,
 }
 
 impl AppState {
-    pub fn new(store: Store, cfg: Arc<Config>, metrics: Metrics, notify: Arc<Notify>) -> Self {
+    pub fn new(
+        store: Store,
+        cfg: Arc<Config>,
+        metrics: Metrics,
+        notify: Arc<Notify>,
+        keyring: Arc<crate::secrets::Keyring>,
+    ) -> Self {
         Self {
             store,
             cfg,
             limiter: Arc::new(RateLimiter::default()),
             metrics,
             notify,
+            keyring,
             pending_cache: Arc::new(std::sync::Mutex::new((
                 std::time::Instant::now() - std::time::Duration::from_secs(60),
                 0,
@@ -101,11 +110,21 @@ impl Runtime {
     pub async fn build(cfg: Config) -> anyhow::Result<Self> {
         let cfg = Arc::new(cfg);
         let store = Store::connect(&cfg.database_url).await?;
-        let created = admin::seed_tenants(&store, &cfg).await?;
+        let keyring = Arc::new(
+            crate::secrets::Keyring::load(&cfg.secrets)
+                .context("cannot start: the signing-secret key is not available")?,
+        );
+        let created = admin::seed_tenants(&store, &cfg, &keyring).await?;
         let metrics = Metrics::new();
         let notify = Arc::new(Notify::new());
-        let state = AppState::new(store.clone(), cfg.clone(), metrics.clone(), notify.clone());
-        let engine = crate::worker::Engine::new(store, cfg, metrics, notify)?;
+        let state = AppState::new(
+            store.clone(),
+            cfg.clone(),
+            metrics.clone(),
+            notify.clone(),
+            keyring.clone(),
+        );
+        let engine = crate::worker::Engine::new(store, cfg, metrics, notify, keyring)?;
         Ok(Self {
             state,
             engine,

@@ -25,6 +25,13 @@ timeout_ms = 10000
 breaker_failures = 5
 breaker_cooldown_ms = 30000
 
+[secrets]
+# Signing secrets are encrypted at rest (AES-256-GCM). The key comes from a provider.
+provider = "env"                 # "env": GATEWAY_SECRET_<KID> (base64, 32 bytes) or "file": <dir>/<kid>
+# dir = "/run/secrets"           # for the file provider
+active_kid = "primary"           # seals new values
+previous_kids = []               # can still open old values during a key change
+
 [[tenants]]
 id = "acme"
 downstream_url = "http://127.0.0.1:9000/events"

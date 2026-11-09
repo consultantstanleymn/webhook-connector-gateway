@@ -74,11 +74,8 @@ async fn ingest_inner(
 
     let sig =
         header_str(headers, SIGNATURE_HEADER).ok_or(ApiError::Unauthorized("missing_signature"))?;
-    let secrets: Vec<&[u8]> = tenant
-        .valid_secrets(now_ms())
-        .into_iter()
-        .map(str::as_bytes)
-        .collect();
+    let secret_strings = tenant.valid_secrets(now_ms(), &st.keyring);
+    let secrets: Vec<&[u8]> = secret_strings.iter().map(|s| s.as_bytes()).collect();
     signature::verify(
         &secrets,
         sig,

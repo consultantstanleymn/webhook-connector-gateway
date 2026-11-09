@@ -6,6 +6,7 @@
 #   postgres needs GATEWAY_TEST_PG_URL and a container named rgw-pg-test (psql inside it).
 # Ports: gateway 25680, mock downstream 25690. Debug builds are enough for this lab.
 set -u
+export GATEWAY_SECRET_PRIMARY="${GATEWAY_SECRET_PRIMARY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}"  # demo key for local runs, not a secret
 cd "$(dirname "$0")/.." || exit 1
 BACKEND="${1:-sqlite}"
 TOTAL="${TOTAL:-500}"

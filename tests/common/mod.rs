@@ -22,6 +22,7 @@ use webhook_connector_gateway::{
     transform::Rule,
 };
 
+pub const TENANT: &str = "acme";
 pub const API_KEY: &str = "test-api-key";
 pub const SECRET: &str = "test-secret";
 pub const ADMIN: &str = "admin-token";
@@ -98,6 +99,19 @@ pub struct Harness {
     pub server: JoinHandle<()>,
 }
 
+/// A directory with one key file named `primary`, shared by all tests of this run.
+pub fn test_key_dir() -> String {
+    use base64::Engine as _;
+    let dir = std::env::temp_dir().join("wcg-test-keys");
+    std::fs::create_dir_all(&dir).unwrap();
+    let file = dir.join("primary");
+    if !file.exists() {
+        let key = base64::engine::general_purpose::STANDARD.encode([42u8; 32]);
+        std::fs::write(&file, key).unwrap();
+    }
+    dir.display().to_string()
+}
+
 /// The database for one test. `GATEWAY_TEST_BACKEND=postgres` uses a fresh schema in
 /// the Postgres at `GATEWAY_TEST_PG_URL`. Any other value uses a temp SQLite file.
 pub fn test_database_url() -> String {
@@ -145,6 +159,12 @@ pub fn test_database_url() -> String {
 pub fn test_config(downstream: &str) -> Config {
     let mut cfg = Config::default();
     cfg.database_url = test_database_url();
+    cfg.secrets = webhook_connector_gateway::secrets::SecretsCfg {
+        provider: "file".into(),
+        dir: Some(test_key_dir()),
+        active_kid: "primary".into(),
+        previous_kids: vec![],
+    };
     cfg.server.admin_token = ADMIN.into();
     cfg.server.max_body_bytes = 4096;
     cfg.queue.workers = 2;

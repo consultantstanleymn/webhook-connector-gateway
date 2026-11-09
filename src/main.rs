@@ -218,7 +218,9 @@ async fn admin_command(cmd: Cmd, cfg: Config) -> anyhow::Result<()> {
         }
         Cmd::RotateSecret { tenant, grace_secs } => {
             let grace = grace_secs.unwrap_or(cfg.server.rotation_grace_secs);
-            let secret = admin::rotate_secret(&store, &tenant, grace)
+            let keyring = webhook_connector_gateway::secrets::Keyring::load(&cfg.secrets)
+                .context("the signing-secret key is not available")?;
+            let secret = admin::rotate_secret(&store, &keyring, &tenant, grace)
                 .await
                 .map_err(|e| anyhow::anyhow!("{e}"))?;
             println!(

@@ -61,3 +61,6 @@ When a downstream fails, every event retries, and the retries add load to a syst
 
 ## 20. Span export is off unless an endpoint is set
 When `OTEL_EXPORTER_OTLP_ENDPOINT` is set, the gateway exports spans over OTLP gRPC. Without it, no exporter starts and the logs work as before. Spans `ingest`, `claim` and `deliver` join one trace per event. Only the trace id travels with a stored event, so each span uses that trace id with a made-up remote parent span id. The outbound `traceparent` header still carries the event trace id with a new span id. Crates (all one 0.33 line, tracing-opentelemetry 0.34): opentelemetry 0.33.1, opentelemetry_sdk 0.33.1, opentelemetry-otlp 0.33.1, tracing-opentelemetry 0.34.0.
+
+## 21. Signing secrets are sealed at rest
+Tenant signing secrets are stored as `v1:<kid>:<nonce>:<ciphertext>` (AES-256-GCM, key id as associated data). The keys come from a provider: environment variables or files. The gateway does not start without the active key. A plain value from before sealing is still read (legacy) until `reseal-secrets` replaces it. The API key is stored as a hash and needs no key. A cloud key service adapter is not built. The key and the data live on the same host, so this protects database dumps and backups, not a host that is fully taken over.

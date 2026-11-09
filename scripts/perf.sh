@@ -3,6 +3,7 @@
 # Starts the gateway and a mock downstream on random free ports. The load
 # client runs on the same machine, so numbers are for that machine only.
 set -u
+export GATEWAY_SECRET_PRIMARY="${GATEWAY_SECRET_PRIMARY:-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=}"  # demo key for local runs, not a secret
 BIN=${BIN:-target/release}
 REQUESTS=${REQUESTS:-5000}
 CONCURRENCY=${CONCURRENCY:-32}

@@ -31,6 +31,7 @@ pub struct Engine {
     pub breakers: Arc<Breakers>,
     pub metrics: Metrics,
     pub notify: Arc<Notify>,
+    pub keyring: Arc<crate::secrets::Keyring>,
     /// One retry budget for each tenant. The tenant set is fixed by the config.
     pub budgets: Arc<Mutex<HashMap<String, RetryBudget>>>,
 }
@@ -41,6 +42,7 @@ impl Engine {
         cfg: Arc<Config>,
         metrics: Metrics,
         notify: Arc<Notify>,
+        keyring: Arc<crate::secrets::Keyring>,
     ) -> anyhow::Result<Self> {
         let deliverer = Deliverer::new(Duration::from_millis(cfg.delivery.timeout_ms))?;
         let breakers = Arc::new(Breakers::new(
@@ -54,6 +56,7 @@ impl Engine {
             breakers,
             metrics,
             notify,
+            keyring,
             budgets: Arc::new(Mutex::new(HashMap::new())),
         })
     }
@@ -156,6 +159,21 @@ impl Engine {
         if ev.attempts == 1 {
             self.with_budget(&ev.tenant_id, |b| b.record_first(now_ms()));
         }
+        let signing_secret = match creds.current_secret(&self.keyring) {
+            Ok(s) => s,
+            Err(e) => {
+                // Do not lose the event: leave it for a later retry. Log the cause.
+                warn!(error = %e, "cannot open the tenant secret; retrying later");
+                self.store
+                    .schedule_retry(
+                        &ev.id,
+                        now_ms() + self.cfg.queue.backoff_max_ms as i64,
+                        "secret unavailable",
+                    )
+                    .await?;
+                return Ok(());
+            }
+        };
         let started = Instant::now();
         let deliver_span = tracing::info_span!("deliver", tenant.id = %ev.tenant_id,
             event.id = %ev.id, attempt = ev.attempts, outcome = tracing::field::Empty);
@@ -164,7 +182,7 @@ impl Engine {
             .deliverer
             .deliver(
                 &tenant.downstream_url,
-                &creds.secret,
+                &signing_secret,
                 &ev.id,
                 &ev.trace_id,
                 serde_json::to_vec(&out)?,
