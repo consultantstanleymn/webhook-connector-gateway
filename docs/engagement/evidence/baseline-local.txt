@@ -1,0 +1,31 @@
+# Evidence: Local baseline of the unchanged gateway
+label: VERIFIED LOCALLY
+date: 2026-11-09 08:25 UTC
+code commit: f7bc10a26fdd2eb6a97bcfbbdcb95a52ae57d43c
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: cargo fmt --all -- --check && nice -n 10 cargo clippy -j 2 --all-targets --locked -- -D warnings && nice -n 10 cargo test -j 2 --locked
+notes: Unit tests: 37 passed. Integration tests: 16 passed. No GitHub Actions run is claimed.
+---
+$ cargo fmt --all -- --check
+exit=0
+$ cargo clippy
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.63s
+$ cargo test
+     Running unittests src/lib.rs (target/debug/deps/webhook_connector_gateway-b40abb7757e11f60)
+running 37 tests
+test result: ok. 37 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.09s
+     Running unittests src/main.rs (target/debug/deps/gateway-c08e010abc55093f)
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/bin/loadtest.rs (target/debug/deps/loadtest-c5145369cc8f0de4)
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running unittests src/bin/mock_downstream.rs (target/debug/deps/mock_downstream-2ade904119db0d13)
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+     Running tests/gateway.rs (target/debug/deps/gateway-564b6d45205bb3e2)
+running 16 tests
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.75s
+running 0 tests
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
