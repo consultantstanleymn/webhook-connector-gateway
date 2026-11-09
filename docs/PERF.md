@@ -113,3 +113,15 @@ If A is above the drain rate, the backlog grows without bound. Backpressure then
 Worked example, using the numbers above (measured on one laptop, load tool and mock on the same machine): the 4 workers drained about 2,200 events per second with a fast mock. Take p = 1 and no arrivals. A backlog of 50,000 events then drains in about 50,000 / 2,200 = 23 seconds. Real ERP downstreams are slower. If T is 0.2 s, then W = 4 gives 4 / 0.2 = 20 events per second, and the same backlog needs about 2,500 seconds (42 minutes). Choose `max_pending` from the longest wait that the customer accepts: `max_pending = drain rate * accepted wait`. The 2,200 events per second figure comes from the fast mock, so it is an upper bound, not a forecast for a real ERP.
 
 `Retry-After` tells senders when to try again. The default is 5 seconds (`queue.retry_after_secs`). The counter `gateway_ingest_shed_total{reason="queue_full"}` counts refused requests.
+
+## k6 and the Rust load tool, side by side
+
+Run on 2026-11-09 with `scripts/k6-ingest.sh`. Release build, SQLite store, 4 workers, mock downstream. The load generators, the gateway and the mock ran on the same laptop (MacBook Pro mid 2015). Numbers are measured on one laptop. Other programs ran at the same time (load average about 2). Treat them as a rough guide, not as a capacity forecast.
+
+| Tool | Setting | Accepted | Failed | p50 | p95 | Notes |
+|---|---|---|---|---|---|---|
+| k6 | constant arrival rate 500 req/s, 20 s | 10,001 | 0.00 % | 0.36 ms | 0.47 ms | no dropped iterations |
+| k6 | constant arrival rate 2,000 req/s, 20 s | 39,414 | 0.00 % | 0.68 ms | 48.3 ms | 587 iterations dropped (k6 could not keep the rate) |
+| Rust `loadtest` | 5,000 requests, concurrency 32 | 5,000 | 0 | 4.91 ms | 13.83 ms | 3,393 req/s, p99 125 ms |
+
+The two tools measure the same endpoint in different ways. k6 holds an arrival rate (open model). The Rust tool holds a number of concurrent clients (closed model). At 2,000 req/s k6 reports about 1,969 req/s, so the machine was near its limit with the load generator on board. Both agree that ingest handles a few thousand requests per second on this laptop, which is about the figure that the earlier runs above found (about 4,100 to 4,400 req/s from the Rust tool alone). The queue was still draining at the end: 4,446 events were pending when the script read the metrics.
