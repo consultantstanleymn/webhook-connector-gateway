@@ -1,0 +1,39 @@
+# Evidence: k6 and Rust load tool against the ingest endpoint
+label: VERIFIED LOCALLY
+date: 2026-11-09 10:10 UTC
+code commit: 99bf4b3b64100c308981e584d0cee0893817f3f6
+working tree clean at run time: yes
+machine: MacBook Pro (mid 2015), 8 logical CPUs, 16 GB RAM, Fedora 44, podman 5.8.7 (measured on one laptop)
+command: flock heavy.lock nice -n 10 scripts/k6-ingest.sh
+notes: Release build, SQLite, 4 workers, mock downstream, all on one laptop with other programs running. The load average at start is in the output. Numbers are measured on one laptop and are not a capacity forecast.
+---
+uptime start:  05:05:55 up  5:22,  1 user,  load average: 1.94, 1.60, 1.76
+=== k6 constant arrival rate 500 req/s for 20 s
+    http_req_duration..............: avg=422.95µs min=267.24µs med=363.42µs max=11.87ms p(90)=430.68µs p(95)=474.31µs
+    http_req_failed................: 0.00%  0 out of 10001
+    http_reqs......................: 10001  500.026243/s
+    iterations.....................: 10001  500.026243/s
+ingest ✓ [ 100% ] 000/050 VUs  20s  500.00 iters/s
+=== k6 constant arrival rate 2000 req/s for 20 s
+    http_req_duration..............: avg=9.04ms min=225.84µs med=677.48µs max=451.12ms p(90)=30ms    p(95)=48.29ms
+    http_req_failed................: 0.00%  0 out of 39414
+    http_reqs......................: 39414  1968.93549/s
+    dropped_iterations.............: 587    29.323721/s
+    iterations.....................: 39414  1968.93549/s
+ingest ✓ [ 100% ] 000/200 VUs  20s  2000.00 iters/s
+=== Rust load tool: 5000 requests, concurrency 32
+requests:     5000
+concurrency:  32
+accepted 202: 5000
+other:        0
+duration:     1.47 s
+throughput:   3393 req/s
+latency ms:   p50=4.91 p95=13.83 p99=125.33 max=206.27
+=== queue after the runs
+gateway_queue_depth{status="dead"} 0
+gateway_queue_depth{status="delivered"} 49965
+gateway_queue_depth{status="filtered"} 0
+gateway_queue_depth{status="pending"} 4446
+gateway_queue_depth{status="processing"} 4
+uptime end:  05:10:40 up  5:27,  1 user,  load average: 2.46, 1.94, 1.86
+exit=0
